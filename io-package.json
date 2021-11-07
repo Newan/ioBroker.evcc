@@ -1,0 +1,232 @@
+{
+    "common": {
+        "name": "evcc",
+        "version": "0.0.1",
+        "news": {
+            "0.0.1": {
+                "en": "initial release",
+                "de": "Erstveröffentlichung",
+                "ru": "Начальная версия",
+                "pt": "lançamento inicial",
+                "nl": "Eerste uitgave",
+                "fr": "Première version",
+                "it": "Versione iniziale",
+                "es": "Versión inicial",
+                "pl": "Pierwsze wydanie",
+                "zh-cn": "首次出版"
+            }
+        },
+        "titleLang": {
+            "en": "EVCC",
+            "de": "EVCC",
+            "ru": "EVCC",
+            "pt": "EVCC",
+            "nl": "EVCC",
+            "fr": "EVCC",
+            "it": "EVCC",
+            "es": "EVCC",
+            "pl": "EVCC",
+            "zh-cn": "EVCC"
+        },
+        "desc": {
+            "en": "Controll evcc over rest api",
+            "de": "Kontrollieren Sie evcc über Ruhe-API",
+            "ru": "Управляйте evcc через api отдыха",
+            "pt": "Controlar evcc sobre api resto",
+            "nl": "Controle evcc over rust api",
+            "fr": "Contrôler evcc sur rest api",
+            "it": "Controllo evcc su resto api",
+            "es": "Controlar evcc sobre resto api",
+            "pl": "Controll evcc nad restapi",
+            "zh-cn": "控制 evcc over rest api"
+        },
+        "authors": [
+            "Newan <info@newan.de>"
+        ],
+        "keywords": [
+            "evcc pv charge"
+        ],
+        "license": "MIT",
+        "platform": "Javascript/Node.js",
+        "main": "build/main.js",
+        "icon": "evcc.png",
+        "enabled": true,
+        "extIcon": "https://raw.githubusercontent.com/Newan/ioBroker.evcc/master/admin/evcc.png",
+        "readme": "https://github.com/Newan/ioBroker.evcc/blob/master/README.md",
+        "loglevel": "info",
+        "mode": "daemon",
+        "type": "energy",
+        "compact": true,
+        "connectionType": "local",
+        "dataSource": "poll",
+        "materialize": true,
+        "dependencies": [
+            {
+                "js-controller": ">=2.0.0"
+            }
+        ]
+    },
+    "native": {
+        "polltime": 100,
+        "ip": "0.0.0.0"
+    },
+    "objects": [],
+    "instanceObjects": [
+        {
+            "_id": "info.connection",
+            "type": "state",
+            "common": {
+                "role": "indicator.connected",
+                "name": "If communication with evcc works",
+                "type": "boolean",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "status.batteryConfigured",
+            "type": "state",
+            "common": {
+                "role": "state",
+                "name": "batteryConfigured",
+                "type": "boolean",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "status.batteryPower",
+            "type": "state",
+            "common": {
+                "role": "state",
+                "name": "batteryPower",
+                "type": "number",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "status.batterySoC",
+            "type": "state",
+            "common": {
+                "role": "state",
+                "name": "batterySoC",
+                "type": "number",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "status.gridConfigured",
+            "type": "state",
+            "common": {
+                "role": "state",
+                "name": "gridConfigured",
+                "type": "boolean",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "status.gridCurrents",
+            "type": "state",
+            "common": {
+                "role": "state",
+                "name": "gridCurrents",
+                "type": "string",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "status.gridPower",
+            "type": "state",
+            "common": {
+                "role": "state",
+                "name": "gridPower",
+                "type": "number",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "status.homePower",
+            "type": "state",
+            "common": {
+                "role": "state",
+                "name": "homePower",
+                "type": "number",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "status.prioritySoC",
+            "type": "state",
+            "common": {
+                "role": "state",
+                "name": "prioritySoC",
+                "type": "number",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "status.pvConfigured",
+            "type": "state",
+            "common": {
+                "role": "state",
+                "name": "pvConfigured",
+                "type": "boolean",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "status.pvPower",
+            "type": "state",
+            "common": {
+                "role": "state",
+                "name": "pvPower",
+                "type": "number",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "status.siteTitle",
+            "type": "state",
+            "common": {
+                "role": "state",
+                "name": "siteTitle",
+                "type": "string",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        }
+    ]
+}

@@ -1,0 +1,5 @@
+{
+    "evcc adapter settings": "Adapter settings for evcc",
+    "ip": "Ip to your evcc instance",
+    "polltime": "Polltime in seconds"
+}
