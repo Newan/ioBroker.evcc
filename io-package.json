@@ -60,15 +60,19 @@
         "connectionType": "local",
         "dataSource": "poll",
         "materialize": true,
+        "adminUI": {
+            "config": "json"
+        },
         "dependencies": [
             {
-                "js-controller": ">=2.0.0"
+                "js-controller": ">=2.0.0",
+                "admin": ">=5.1.26"
             }
         ]
     },
     "native": {
         "polltime": 100,
-        "ip": "0.0.0.0"
+        "ip": "http://120.0.0.1:7070"
     },
     "objects": [],
     "instanceObjects": [
@@ -107,7 +111,7 @@
                 "type": "number",
                 "read": true,
                 "write": false,
-                "def": false
+                "def": 0
             },
             "native": {}
         },
@@ -120,7 +124,7 @@
                 "type": "number",
                 "read": true,
                 "write": false,
-                "def": false
+                "def": 0
             },
             "native": {}
         },
@@ -146,7 +150,7 @@
                 "type": "string",
                 "read": true,
                 "write": false,
-                "def": false
+                "def": ""
             },
             "native": {}
         },
@@ -159,7 +163,7 @@
                 "type": "number",
                 "read": true,
                 "write": false,
-                "def": false
+                "def": 0
             },
             "native": {}
         },
@@ -172,7 +176,7 @@
                 "type": "number",
                 "read": true,
                 "write": false,
-                "def": false
+                "def": 0
             },
             "native": {}
         },
@@ -185,7 +189,7 @@
                 "type": "number",
                 "read": true,
                 "write": false,
-                "def": false
+                "def": 0
             },
             "native": {}
         },
@@ -211,7 +215,7 @@
                 "type": "number",
                 "read": true,
                 "write": false,
-                "def": false
+                "def": 0
             },
             "native": {}
         },
@@ -224,7 +228,7 @@
                 "type": "string",
                 "read": true,
                 "write": false,
-                "def": false
+                "def": ""
             },
             "native": {}
         }

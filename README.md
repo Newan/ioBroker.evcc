@@ -15,14 +15,13 @@
 
 Controll evcc over rest api
 
-## Developer manual
-This section is intended for the developer. It can be deleted later
-
 ## Changelog
 <!--
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+
 ### 0.0.2 (2021-11-07)
 * (Newan) initial release
 

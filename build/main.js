@@ -83,10 +83,6 @@ class Evcc extends utils.Adapter {
      */
     onUnload(callback) {
         try {
-            // Here you must clear all timeouts or intervals that may still be active
-            // clearTimeout(timeout1);
-            // clearTimeout(timeout2);
-            // ...
             clearInterval(this.adapterIntervals);
             callback();
         }
@@ -157,18 +153,18 @@ class Evcc extends utils.Adapter {
             (0, axios_1.default)('http://' + this.ip + '/api/state').then(async (response) => {
                 this.log.debug('Get-Data from evcc:' + JSON.stringify(response.data));
                 //Global status Items
-                await this.setStateAsync('status.batteryConfigured', { val: response.data.batteryConfigured, ack: true });
-                await this.setStateAsync('status.batteryPower', { val: response.data.batteryPower, ack: true });
-                await this.setStateAsync('status.batterySoC', { val: response.data.batterySoC, ack: true });
-                await this.setStateAsync('status.gridConfigured', { val: response.data.gridConfigured, ack: true });
-                await this.setStateAsync('status.gridCurrents', { val: JSON.stringify(response.data.gridCurrents), ack: true });
-                await this.setStateAsync('status.homePower', { val: response.data.homePower, ack: true });
-                await this.setStateAsync('status.prioritySoC', { val: response.data.prioritySoC, ack: true });
-                await this.setStateAsync('status.pvConfigured', { val: response.data.pvConfigured, ack: true });
-                await this.setStateAsync('status.pvPower', { val: response.data.pvPower, ack: true });
-                await this.setStateAsync('status.siteTitle', { val: response.data.siteTitle, ack: true });
+                await this.setStateAsync('status.batteryConfigured', { val: response.data.result.batteryConfigured, ack: true });
+                await this.setStateAsync('status.batteryPower', { val: response.data.result.batteryPower, ack: true });
+                await this.setStateAsync('status.batterySoC', { val: response.data.result.batterySoC, ack: true });
+                await this.setStateAsync('status.gridConfigured', { val: response.data.result.gridConfigured, ack: true });
+                await this.setStateAsync('status.gridCurrents', { val: JSON.stringify(response.data.result.gridCurrents), ack: true });
+                await this.setStateAsync('status.homePower', { val: response.data.result.homePower, ack: true });
+                await this.setStateAsync('status.prioritySoC', { val: response.data.result.prioritySoC, ack: true });
+                await this.setStateAsync('status.pvConfigured', { val: response.data.result.pvConfigured, ack: true });
+                await this.setStateAsync('status.pvPower', { val: response.data.result.pvPower, ack: true });
+                await this.setStateAsync('status.siteTitle', { val: response.data.result.siteTitle, ack: true });
                 //Laden jeden Ladepunk einzeln
-                const tmpListLoadpoints = response.data.loadpoints;
+                const tmpListLoadpoints = response.data.result.loadpoints;
                 tmpListLoadpoints.forEach(async (loadpoint, index) => {
                     await this.setLoadPointdata(loadpoint, index);
                 });
@@ -610,7 +606,7 @@ class Evcc extends utils.Adapter {
         axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/mode/pv').then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
-            this.log.error(error.message);
+            this.log.error('1' + error.message);
         });
     }
     setEvccStartMin(index) {
@@ -618,7 +614,7 @@ class Evcc extends utils.Adapter {
         axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/mode/minpv').then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
-            this.log.error(error.message);
+            this.log.error('2' + error.message);
         });
     }
     setEvccStartNow(index) {
@@ -626,7 +622,7 @@ class Evcc extends utils.Adapter {
         axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/mode/now').then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
-            this.log.error(error.message);
+            this.log.error('3' + error.message);
         });
     }
     setEvccStop(index) {
@@ -634,7 +630,7 @@ class Evcc extends utils.Adapter {
         axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/mode/off').then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
-            this.log.error(error.message);
+            this.log.error('4' + error.message);
         });
     }
     setEvccTargetSoC(index, value) {
@@ -642,7 +638,7 @@ class Evcc extends utils.Adapter {
         axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/targetsoc/' + value).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
-            this.log.error(error.message);
+            this.log.error('5' + error.message);
         });
     }
     setEvccMinSoC(index, value) {
@@ -650,7 +646,7 @@ class Evcc extends utils.Adapter {
         axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/minsoc/' + value).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
-            this.log.error(error.message);
+            this.log.error('6' + error.message);
         });
     }
     setEvccMinCurrent(index, value) {
@@ -658,7 +654,7 @@ class Evcc extends utils.Adapter {
         axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/mincurrent/' + value).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
-            this.log.error(error.message);
+            this.log.error('7' + error.message);
         });
     }
     setEvccMaxCurrent(index, value) {
@@ -666,7 +662,7 @@ class Evcc extends utils.Adapter {
         axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/maxcurrent/' + value).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
-            this.log.error(error.message);
+            this.log.error('8' + error.message);
         });
     }
     setEvccPhases(index, value) {
@@ -674,7 +670,7 @@ class Evcc extends utils.Adapter {
         axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/phases/' + value).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
-            this.log.error(error.message);
+            this.log.error('9' + error.message);
         });
     }
 }
