@@ -20,7 +20,7 @@ Controll evcc over rest api
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.3 (2022-05-21)
 (Newan) support evcc 0.9X - change to jsonConfig GUI
 
 ### 0.0.2 (2021-11-07)

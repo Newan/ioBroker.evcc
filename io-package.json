@@ -1,8 +1,20 @@
 {
     "common": {
         "name": "evcc",
-        "version": "0.0.1",
+        "version": "0.0.3",
         "news": {
+            "0.0.3": {
+                "en": "(Newan) support evcc 0.9X - change to jsonConfig GUI",
+                "de": "(Newan) Unterstützung von evcc 0.9X - Wechsel zu jsonConfig GUI",
+                "ru": "(Newan) поддержка evcc 0.9X - изменение графического интерфейса jsonConfig",
+                "pt": "(Newan) suporte evcc 0.9X - mude para jsonConfig GUI",
+                "nl": "(Newan) ondersteuning voor evcc 0.9X - verander naar jsonConfig GUI",
+                "fr": "(Newan) prend en charge evcc 0.9X - passe à l'interface graphique jsonConfig",
+                "it": "(Newan) supporta evcc 0.9X - cambia in jsonConfig GUI",
+                "es": "(Newan) soporte evcc 0.9X - cambio a jsonConfig GUI",
+                "pl": "(Newan) obsługuje evcc 0.9X - zmiana na GUI jsonConfig",
+                "zh-cn": "(Newan) 支持 evcc 0.9X - 更改为 jsonConfig GUI"
+            },
             "0.0.1": {
                 "en": "initial release",
                 "de": "Erstveröffentlichung",
