@@ -1,9 +1,3 @@
-/*
- * Created with @iobroker/create-adapter v1.34.1
- */
-
-// The adapter-core module gives you access to the core ioBroker functions
-// you need to create an adapter
 import * as utils from '@iobroker/adapter-core';
 import axios from 'axios';
 import {  Loadpoint } from './lib/loadpoint';
@@ -53,6 +47,9 @@ class Evcc extends utils.Adapter {
             this.log.error('Wrong Polltime (polltime < 0), adapter stop')
             return;
         }
+
+        //holen für den Start einmal alle Daten
+        this.getEvccData();
 
         //War alles ok, dann können wir die Daten abholen
         this.adapterIntervals = this.setInterval(() => this.getEvccData(), this.polltime * 1000);

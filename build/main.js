@@ -1,7 +1,4 @@
 "use strict";
-/*
- * Created with @iobroker/create-adapter v1.34.1
- */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
@@ -25,8 +22,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-// The adapter-core module gives you access to the core ioBroker functions
-// you need to create an adapter
 const utils = __importStar(require("@iobroker/adapter-core"));
 const axios_1 = __importDefault(require("axios"));
 class Evcc extends utils.Adapter {
@@ -73,6 +68,8 @@ class Evcc extends utils.Adapter {
             this.log.error('Wrong Polltime (polltime < 0), adapter stop');
             return;
         }
+        //holen für den Start einmal alle Daten
+        this.getEvccData();
         //War alles ok, dann können wir die Daten abholen
         this.adapterIntervals = this.setInterval(() => this.getEvccData(), this.polltime * 1000);
         this.log.debug('config ip: ' + this.config.ip);

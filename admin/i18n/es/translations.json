@@ -1,0 +1,7 @@
+{
+    "general": "General",
+    "polltime": "Intervalo",
+    "polltime_help": "Intervalo en segundos, para buscar en evcc",
+    "ip": "IP",
+    "ip_help": "Dirección IP de su instalación evcc"
+}

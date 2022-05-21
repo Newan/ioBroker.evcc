@@ -1,0 +1,7 @@
+{
+    "general": "Algemeen",
+    "polltime": "interval",
+    "polltime_help": "Interval in seconden, om op te zoeken naar evcc",
+    "ip": "IK P",
+    "ip_help": "IP-Adres naar uw evcc-installatie"
+}

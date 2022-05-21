@@ -72,7 +72,7 @@
     },
     "native": {
         "polltime": 100,
-        "ip": "http://120.0.0.1:7070"
+        "ip": "127.0.0.1:7070"
     },
     "objects": [],
     "instanceObjects": [

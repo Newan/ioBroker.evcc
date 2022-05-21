@@ -1,0 +1,7 @@
+{
+    "general": "一般的",
+    "polltime": "间隔",
+    "polltime_help": "以秒为单位的间隔，以查找 evcc",
+    "ip": "知识产权",
+    "ip_help": "IP 地址到您的 evcc 安装"
+}

@@ -6,43 +6,21 @@
       "type": "panel",
       "label": "general",
       "items": {
-        "_doku": {
-          "newLine": true,
-          "type": "staticText",
-          "label": "documenation",
-          "text": "documenation_text",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },                
-        "intervall": {
+        "polltime": {
           "newLine": true,
           "type": "number",
-          "label": "intervall",
-          "help": "intervall_help",
+          "label": "polltime",
+          "help": "polltime_help",
           "min": 1,
           "sm": 12,
           "md": 6,
           "lg": 6
         },
-        "start_time": {
+        "ip": {
           "newLine": true,
-          "type": "number",
-          "label": "starttime",
-          "help": "starttime_help",
-          "min": 1,
-          "max": 3600,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "stop_time": {
-          "newLine": true,
-          "type": "number",
-          "label": "stoptime",
-          "help": "stoptime_help",
-          "min": 1,
-          "max": 3600,
+          "type": "text",
+          "label": "ip",
+          "help": "ip_help",
           "sm": 12,
           "md": 6,
           "lg": 6
@@ -57,126 +35,6 @@
           "href": "https://www.paypal.com/donate/?hosted_button_id=KNPGJTDLWR4CG",
           "button": "button",
           "icon": "https://www.paypalobjects.com/en_US/DK/i/btn/btn_donateCC_LG.gif",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        }
-      }
-    },
-    "grid": {
-      "type": "panel",
-      "label": "grid",
-      "items": {
-        "grid_id": {
-          "type": "objectId",
-          "help": "grid_id_help",
-          "label": "grid_id",
-          "attr": "id",
-          "filter": false,
-          "sort": false,
-          "default": "",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "grid_factor": {
-          "newLine": true,
-          "type": "number",
-          "label": "grid_factor",
-          "help": "grid_factor_help",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        }        
-      }
-    },
-    "wallbox": {
-      "type": "panel",
-      "label": "wallbox",
-      "items": {
-        "wallbox_enable_id": {
-          "type": "objectId",
-          "help": "wallbox_enable_id_help",
-          "label": "wallbox_enable_id",
-          "attr": "id",
-          "filter": false,
-          "sort": false,
-          "default": "",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "wallbox_ampere_id": {
-          "newLine": true,
-          "type": "objectId",
-          "help": "wallbox_ampere_id_help",
-          "label": "wallbox_ampere_id",
-          "attr": "id",
-          "filter": false,
-          "sort": false,
-          "default": "",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "wallbox_ampere_step": {
-          "newLine": true,
-          "type": "number",
-          "label": "wallbox_ampere_step",
-          "help": "wallbox_ampere_step_help",
-          "min": 1,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },        
-        "wallbox_ampere_max": {
-          "newLine": true,
-          "type": "number",
-          "label": "wallbox_ampere_max",
-          "help": "wallbox_ampere_max_help",
-          "min": "1",
-          "max": "22",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "wallbox_ampere_min": {
-          "newLine": true,
-          "type": "number",
-          "label": "wallbox_ampere_min",
-          "help": "wallbox_ampere_min_help",
-          "min": "1",
-          "max": "22",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        }                        
-      }
-    },
-    "vehicle": {
-      "type": "panel",
-      "label": "vehicle",
-      "items": {
-        "vehicle_pluged_id": {
-          "type": "objectId",
-          "help": "vehicle_pluged_id_help",
-          "label": "vehicle_pluged_id",
-          "attr": "id",
-          "filter": false,
-          "sort": false,
-          "default": "",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "vehicle_soc_id": {
-          "type": "objectId",
-          "help": "vehicle_soc_id_help",
-          "label": "vehicle_soc_id",
-          "attr": "id",
-          "filter": false,
-          "sort": false,
-          "default": "",
           "sm": 12,
           "md": 6,
           "lg": 6

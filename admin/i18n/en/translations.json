@@ -1,35 +1,7 @@
 {
 "general": "General",
-"documenation_text": "Please check the documantion on github: ",
-"intervall": "Intervall",
-"intervall_help": "Intervall in seconds, to lookup the pv logic",
-"starttime": "Starttime",
-"starttime_help": "Time in second, how long wait to chek the min power",
-"stoptime": "Stoptime",
-"stoptime_help": "Time in second, how long wait to chek the power to stop",
-
-"grid": "Grid",
-"grid_id": "Grid-ID",
-"grid_id_help": "ID of the datapoint to show the grid power in watt",
-"grid_factor": "Grid factor",
-"grid_factor_help": "Factor/Multiplier fpr Conversion the GridId value",
-
-"wallbox": "Wallbox",
-"wallbox_enable_id": "Wallbox-ID enable",
-"wallbox_enable_id_help": "ID of the datapint to enable/disable the wallbox (boolean)",
-"wallbox_ampere_id": "Wallbox-ID dynamic ampere",
-"wallbox_ampere_id_help": "ID of the datapint to set the dynamic ampere",
-"wallbox_ampere_step": "Ampere for steps",
-"wallbox_ampere_step_help": "Ampere to change the Wallbox to the next step (up/down)",
-"wallbox_ampere_max": "Max Ampere",
-"wallbox_ampere_max_help": "Max ampere of the Wallbox (16=11KW / 32=22KW)",
-"wallbox_ampere_min": "Min Ampere",
-"wallbox_ampere_min_help": "Min ampere to start charge",
-
-"vehicle": "Vehicle",
-"vehicle_pluged_id": "Vehicle-ID pluged",
-"vehicle_pluged_id_help": "Vehicle-ID of the datapoint to show the pluged status (boolean)",
-"vehicle_soc_id": "Vehicle-ID SoC",
-"vehicle_soc_id_help": "Vehicle-ID of the datapoint to show the SoC status (1-100)"
-
+"polltime": "Intervall",
+"polltime_help": "Intervall in seconds, to lookup to evcc",
+"ip": "IP",
+"ip_help": "IP-Adres to your evcc instalation"
 }
