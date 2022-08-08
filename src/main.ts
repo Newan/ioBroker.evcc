@@ -268,7 +268,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'minSoC',
                 type: 'number',
-                role: 'button',
+                role: 'value.min',
                 read: true,
                 write: false,
             },
@@ -282,7 +282,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'targetSoC',
                 type: 'number',
-                role: 'button',
+                role: 'value',
                 read: true,
                 write: false,
             },
@@ -295,7 +295,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'maxCurrent',
                 type: 'number',
-                role: 'button',
+                role: 'value.max',
                 read: true,
                 write: false,
             },
@@ -308,7 +308,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'minCurrent',
                 type: 'number',
-                role: 'button',
+                role: 'value',
                 read: true,
                 write: false,
             },
@@ -321,7 +321,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'phases',
                 type: 'number',
-                role: 'button',
+                role: 'value',
                 read: true,
                 write: false,
             },
@@ -335,7 +335,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'activePhases',
                 type: 'number',
-                role: 'button',
+                role: 'value',
                 read: true,
                 write: false,
             },
@@ -347,7 +347,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'chargeConfigured',
                 type: 'boolean',
-                role: 'button',
+                role: 'value.current',
                 read: true,
                 write: false,
             },
@@ -359,7 +359,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'chargeCurrent',
                 type: 'number',
-                role: 'button',
+                role: 'value.current',
                 read: true,
                 write: false,
             },
@@ -371,7 +371,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'chargeCurrents',
                 type: 'string',
-                role: 'button',
+                role: 'value.current',
                 read: true,
                 write: false,
             },
@@ -383,7 +383,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'chargeDuration',
                 type: 'number',
-                role: 'button',
+                role: 'value.current',
                 read: true,
                 write: false,
             },
@@ -395,7 +395,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'chargePower',
                 type: 'number',
-                role: 'button',
+                role: 'value.current',
                 read: true,
                 write: false,
             },
@@ -407,7 +407,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'chargeRemainingDuration',
                 type: 'number',
-                role: 'button',
+                role: 'value.current',
                 read: true,
                 write: false,
             },
@@ -419,7 +419,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'chargedEnergy',
                 type: 'number',
-                role: 'button',
+                role: 'value.current',
                 read: true,
                 write: false,
             },
@@ -431,7 +431,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'charging',
                 type: 'boolean',
-                role: 'button',
+                role: 'value.current',
                 read: true,
                 write: false,
             },
@@ -443,7 +443,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'connected',
                 type: 'boolean',
-                role: 'button',
+                role: 'info.status',
                 read: true,
                 write: false,
             },
@@ -455,7 +455,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'connectedDuration',
                 type: 'number',
-                role: 'button',
+                role: 'info.status',
                 read: true,
                 write: false,
             },
@@ -467,7 +467,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'enabled',
                 type: 'boolean',
-                role: 'button',
+                role: 'info.status',
                 read: true,
                 write: false,
             },
@@ -479,7 +479,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'hasVehicle',
                 type: 'boolean',
-                role: 'button',
+                role: 'info.status',
                 read: true,
                 write: false,
             },
@@ -491,7 +491,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'mode',
                 type: 'string',
-                role: 'button',
+                role: 'info.status',
                 read: true,
                 write: false,
             },
@@ -503,7 +503,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'timerActive',
                 type: 'boolean',
-                role: 'button',
+                role: 'info.status',
                 read: true,
                 write: false,
             },
@@ -515,7 +515,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'timerProjectedEnd',
                 type: 'string',
-                role: 'button',
+                role: 'info.status',
                 read: true,
                 write: false,
             },
@@ -527,7 +527,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'timerSet',
                 type: 'boolean',
-                role: 'button',
+                role: 'info.status',
                 read: true,
                 write: false,
             },
@@ -539,7 +539,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'title',
                 type: 'string',
-                role: 'button',
+                role: 'info.name',
                 read: true,
                 write: false,
             },
@@ -551,7 +551,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'vehicleCapacity',
                 type: 'number',
-                role: 'button',
+                role: 'info.name',
                 read: true,
                 write: false,
             },
@@ -563,7 +563,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'vehicleIdentity',
                 type: 'string',
-                role: 'button',
+                role: 'info.name',
                 read: true,
                 write: false,
             },
@@ -575,7 +575,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'vehiclePresent',
                 type: 'boolean',
-                role: 'button',
+                role: 'info.status',
                 read: true,
                 write: false,
             },
@@ -587,7 +587,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'vehicleRange',
                 type: 'number',
-                role: 'button',
+                role: 'info.status',
                 read: true,
                 write: false,
             },
@@ -599,7 +599,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'vehicleSoC',
                 type: 'number',
-                role: 'button',
+                role: 'info.status',
                 read: true,
                 write: false,
             },
@@ -611,7 +611,7 @@ class Evcc extends utils.Adapter {
             common: {
                 name: 'vehicleTitle',
                 type: 'string',
-                role: 'button',
+                role: 'info.name',
                 read: true,
                 write: false,
             },
