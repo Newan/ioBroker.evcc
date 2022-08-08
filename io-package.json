@@ -1,8 +1,20 @@
 {
     "common": {
         "name": "evcc",
-        "version": "0.0.3",
+        "version": "0.0.4",
         "news": {
+            "0.0.4": {
+                "en": "first release",
+                "de": "erste veröffentlichung",
+                "ru": "первый релиз",
+                "pt": "primeiro lançamento",
+                "nl": "eerste vrijlating",
+                "fr": "première version",
+                "it": "primo rilascio",
+                "es": "primera liberación",
+                "pl": "pierwsze wydanie",
+                "zh-cn": "首次释放"
+            },
             "0.0.3": {
                 "en": "(Newan) support evcc 0.9X - change to jsonConfig GUI",
                 "de": "(Newan) Unterstützung von evcc 0.9X - Wechsel zu jsonConfig GUI",

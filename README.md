@@ -20,7 +20,7 @@ Controll evcc over rest api
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.4 (2022-08-08)
 * first release
 
 ### 0.0.3 (2022-05-21)
