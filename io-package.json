@@ -89,8 +89,7 @@
         },
         "dependencies": [
             {
-                "js-controller": ">=2.0.0",
-                "admin": ">=5.1.26"
+                "js-controller": ">=2.0.0"
             }
         ]
     },
