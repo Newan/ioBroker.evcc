@@ -25,6 +25,16 @@
           "md": 6,
           "lg": 6
         },
+        "port": {
+          "newLine": false,
+          "type": "number",
+          "label": "port",
+          "help": "port_help",
+          "min": 1,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
+        },
         "_spacer": {
           "type": "divider",
           "color": "secondary"

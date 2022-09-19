@@ -3,5 +3,7 @@
     "polltime": "Intervall",
     "polltime_help": "Intervall in Sekunden, um nach evcc zu suchen",
     "ip": "IP",
-    "ip_help": "IP-Adresse zu Ihrer evcc-Installation"
+    "ip_help": "IP-Adresse zu Ihrer evcc-Installation",
+    "port": "Port",
+    "port_help": "Port zu Ihrer evcc-Installation"
 }

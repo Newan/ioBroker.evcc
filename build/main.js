@@ -32,6 +32,7 @@ class Evcc extends utils.Adapter {
         });
         this.ip = '';
         this.polltime = 0;
+        this.timeout = 1000;
         this.maxLoadpointIndex = -1;
         this.on('ready', this.onReady.bind(this));
         this.on('stateChange', this.onStateChange.bind(this));
@@ -47,8 +48,8 @@ class Evcc extends utils.Adapter {
             if (this.config.ip != '0.0.0.0' && this.config.ip != '') {
                 this.config.ip = this.config.ip.replace('http', '');
                 this.config.ip = this.config.ip.replace('://', '');
-                //this.config.ip = this.config.ip.replace('/', '');
-                this.ip = this.config.ip;
+                // add port to ip
+                this.ip = this.config.ip + ':' + this.config.port;
                 this.log.debug('Final Ip:' + this.ip);
             }
             else {
@@ -63,6 +64,7 @@ class Evcc extends utils.Adapter {
         //Prüfen Polltime
         if (this.config.polltime > 0) {
             this.polltime = this.config.polltime;
+            this.timeout = (this.polltime * 1000) - 500; //'500ms unter intervall'
         }
         else {
             this.log.error('Wrong Polltime (polltime < 0), adapter stop');
@@ -147,7 +149,7 @@ class Evcc extends utils.Adapter {
     getEvccData() {
         try {
             this.log.debug('call: ' + 'http://' + this.ip + '/api/state');
-            (0, axios_1.default)('http://' + this.ip + '/api/state').then(async (response) => {
+            (0, axios_1.default)('http://' + this.ip + '/api/state', { timeout: this.timeout }).then(async (response) => {
                 this.log.debug('Get-Data from evcc:' + JSON.stringify(response.data));
                 //Global status Items
                 await this.setStateAsync('status.batteryConfigured', { val: response.data.result.batteryConfigured, ack: true });
@@ -600,7 +602,7 @@ class Evcc extends utils.Adapter {
     //Funktionen zum sterun von evcc
     setEvccStartPV(index) {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/mode/pv');
-        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/mode/pv').then(() => {
+        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/mode/pv', { timeout: this.timeout }).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
             this.log.error('1' + error.message);
@@ -608,7 +610,7 @@ class Evcc extends utils.Adapter {
     }
     setEvccStartMin(index) {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/mode/minpv');
-        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/mode/minpv').then(() => {
+        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/mode/minpv', { timeout: this.timeout }).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
             this.log.error('2' + error.message);
@@ -616,7 +618,7 @@ class Evcc extends utils.Adapter {
     }
     setEvccStartNow(index) {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/mode/now');
-        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/mode/now').then(() => {
+        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/mode/now', { timeout: this.timeout }).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
             this.log.error('3' + error.message);
@@ -624,7 +626,7 @@ class Evcc extends utils.Adapter {
     }
     setEvccStop(index) {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/mode/off');
-        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/mode/off').then(() => {
+        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/mode/off', { timeout: this.timeout }).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
             this.log.error('4' + error.message);
@@ -632,7 +634,7 @@ class Evcc extends utils.Adapter {
     }
     setEvccTargetSoC(index, value) {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/targetsoc/' + value);
-        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/targetsoc/' + value).then(() => {
+        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/targetsoc/' + value, { timeout: this.timeout }).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
             this.log.error('5' + error.message);
@@ -640,7 +642,7 @@ class Evcc extends utils.Adapter {
     }
     setEvccMinSoC(index, value) {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/minsoc/' + value);
-        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/minsoc/' + value).then(() => {
+        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/minsoc/' + value, { timeout: this.timeout }).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
             this.log.error('6' + error.message);
@@ -648,7 +650,7 @@ class Evcc extends utils.Adapter {
     }
     setEvccMinCurrent(index, value) {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/mincurrent/' + value);
-        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/mincurrent/' + value).then(() => {
+        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/mincurrent/' + value, { timeout: this.timeout }).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
             this.log.error('7' + error.message);
@@ -656,7 +658,7 @@ class Evcc extends utils.Adapter {
     }
     setEvccMaxCurrent(index, value) {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/maxcurrent/' + value);
-        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/maxcurrent/' + value).then(() => {
+        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/maxcurrent/' + value, { timeout: this.timeout }).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
             this.log.error('8' + error.message);
@@ -664,7 +666,7 @@ class Evcc extends utils.Adapter {
     }
     setEvccPhases(index, value) {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/phases/' + value);
-        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/phases/' + value).then(() => {
+        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/phases/' + value, { timeout: this.timeout }).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
             this.log.error('9' + error.message);

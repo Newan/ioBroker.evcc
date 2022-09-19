@@ -1,7 +1,10 @@
 {
 "general": "General",
-"polltime": "Intervall",
-"polltime_help": "Intervall in seconds, to lookup to evcc",
+"polltime": "Interval",
+"polltime_help": "Interval in seconds, to lookup to evcc",
 "ip": "IP",
-"ip_help": "IP-Adres to your evcc instalation"
+"ip_help": "IP-Adress to your evcc instalation",
+"port": "Port",
+"port_help": "Port to your evcc instalation"
+
 }
