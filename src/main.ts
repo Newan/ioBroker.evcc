@@ -29,7 +29,7 @@ class Evcc extends utils.Adapter {
             if( this.config.ip != '0.0.0.0' && this.config.ip != '') {
                 this.config.ip = this.config.ip.replace('http', '');
                 this.config.ip = this.config.ip.replace('://', '');
-                
+
                 // add port to ip
                 this.ip = this.config.ip + ':' + this.config.port;
                 this.log.debug('Final Ip:' + this.ip);
