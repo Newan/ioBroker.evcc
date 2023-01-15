@@ -1,21 +1,8 @@
 {
     "common": {
         "name": "evcc",
-        "version": "0.0.4",
+        "version": "0.0.5",
         "news": {
-            "0.0.5": {
-                "en": "Update for evcc 1.11.x",
-                "de": "Update für evcc 1.11.x",
-                "ru": "Обновление для evcc 1.11.x",
-                "pt": "Atualização para evcc 1.11.x",
-                "nl": "Update voor evcc 1.11",
-                "fr": "Mise à jour pour evcc 1.11.x",
-                "it": "Aggiornamento per evcc 1.11.x",
-                "es": "Actualización para evcc 1.11.x",
-                "pl": "Data dostępu do 1.11.x",
-                "uk": "Оновлення для evcc 1.11.x",
-                "zh-cn": "最新资料"
-            },
             "0.0.4": {
                 "en": "first release",
                 "de": "erste veröffentlichung",
@@ -117,10 +104,10 @@
             "_id": "info",
             "type": "channel",
             "common": {
-              "name": "Information"
+                "name": "Information"
             },
             "native": {}
-        },        
+        },
         {
             "_id": "info.connection",
             "type": "state",
@@ -138,10 +125,10 @@
             "_id": "status",
             "type": "channel",
             "common": {
-              "name": "Status"
+                "name": "Status"
             },
             "native": {}
-        },        
+        },
         {
             "_id": "status.batteryConfigured",
             "type": "state",

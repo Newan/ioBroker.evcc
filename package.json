@@ -1,6 +1,6 @@
 {
   "name": "iobroker.evcc",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Controll evcc over rest api",
   "author": {
     "name": "Newan",
@@ -20,7 +20,9 @@
     "axios": "^0.27.2"
   },
   "devDependencies": {
-    "@alcalzone/release-script": "^2.2.2",
+    "@alcalzone/release-script": "^3.5.8",
+    "@alcalzone/release-script-plugin-iobroker": "^3.5.8",
+    "@alcalzone/release-script-plugin-license": "^3.5.8",
     "@iobroker/adapter-dev": "^1.0.1",
     "@iobroker/testing": "^4.0.0",
     "@tsconfig/node14": "^1.0.3",
@@ -59,7 +61,7 @@
     "test:integration": "mocha test/integration --exit",
     "test": "npm run test:ts && npm run test:package",
     "check": "tsc --noEmit",
-    "lint": "eslint --ext .ts,.tsx src/ admin/src/",
+    "lint": "eslint --ext .ts,.tsx src/",
     "release": "release-script",
     "translate": "translate-adapter"
   },

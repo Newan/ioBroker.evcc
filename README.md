@@ -24,6 +24,9 @@ Controll evcc over rest api
 * Update for evcc 1.11.x
 * Bugfix #4, change SoC names
 
+### 0.0.5 (2022-10-14)
+* update for latest-repository
+
 ### 0.0.4 (2022-08-08)
 * first release
 
