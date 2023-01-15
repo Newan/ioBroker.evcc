@@ -3,6 +3,31 @@
         "name": "evcc",
         "version": "0.0.5",
         "news": {
+            "0.0.6": {
+                "en": "Update for evcc 1.11.x",
+                "de": "Update für evcc 1.11.x",
+                "ru": "Обновление для evcc 1.11.x",
+                "pt": "Atualização para evcc 1.11.x",
+                "nl": "Update voor evcc 1.11",
+                "fr": "Mise à jour pour evcc 1.11.x",
+                "it": "Aggiornamento per evcc 1.11.x",
+                "es": "Actualización para evcc 1.11.x",
+                "pl": "Data dostępu do 1.11.x",
+                "uk": "Оновлення для evcc 1.11.x",
+                "zh-cn": "最新资料"
+            },
+            "0.0.5": {
+                "en": "update for latest-repository",
+                "de": "Update für latest-Repository",
+                "ru": "обновление для последнего репозитория",
+                "pt": "atualização para o repositório mais recente",
+                "nl": "update voor laatste-repository",
+                "fr": "mise à jour pour le dernier référentiel",
+                "it": "aggiornamento per l'ultimo repository",
+                "es": "actualización para el último repositorio",
+                "pl": "aktualizacja do najnowszego repozytorium",
+                "zh-cn": "更新最新存储库"
+            },
             "0.0.4": {
                 "en": "first release",
                 "de": "erste veröffentlichung",
