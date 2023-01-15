@@ -1,0 +1,4 @@
+chore: release v0.0.6
+
+Update for evcc 1.11.x
+Bugfix #4, change SoC names
