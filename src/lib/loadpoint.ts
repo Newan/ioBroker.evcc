@@ -14,10 +14,10 @@ export interface Loadpoint {
     hasVehicle: boolean; //true,
     maxCurrent: number; //16,
     minCurrent: number; //6,
-    minSoC: number; //0,
+    minSoc: number; //0,
     mode: string ; //off,
     phases: number; //3,
-    targetSoC: number; //100,
+    targetSoc: number; //100,
     timerActive: boolean; //true,
     timerProjectedEnd: string ; //2021-11-06T20:59:00+01:00,
     timerSet: boolean; //false,
@@ -26,6 +26,6 @@ export interface Loadpoint {
     vehicleIdentity: string ; //Firma,
     vehiclePresent: boolean; //true,
     vehicleRange: number; //50,
-    vehicleSoC: number; //100,
+    vehicleSoc: number; //100,
     vehicleTitle: string ; //A6 Tfsie 55
 }

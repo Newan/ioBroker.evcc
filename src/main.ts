@@ -29,7 +29,7 @@ class Evcc extends utils.Adapter {
             if( this.config.ip != '0.0.0.0' && this.config.ip != '') {
                 this.config.ip = this.config.ip.replace('http', '');
                 this.config.ip = this.config.ip.replace('://', '');
-                
+
                 // add port to ip
                 this.ip = this.config.ip + ':' + this.config.port;
                 this.log.debug('Final Ip:' + this.ip);
@@ -45,7 +45,7 @@ class Evcc extends utils.Adapter {
         //Prüfen Polltime
         if(this.config.polltime > 0) {
             this.polltime = this.config.polltime;
-            this.timeout = (this.polltime * 1000) - 500; //'500ms unter intervall'
+            this.timeout = (this.polltime * 1000) - 500; //'500ms unter interval'
         } else {
             this.log.error('Wrong Polltime (polltime < 0), adapter stop')
             return;
@@ -99,13 +99,13 @@ class Evcc extends utils.Adapter {
                         this.log.info('Start evcc pv only charging on loadpointindex: ' + idProperty[3]);
                         this.setEvccStartPV(idProperty[3]);
                         break;
-                    case 'minSoC':
-                        this.log.info('Set minSoC on loadpointindex: ' + idProperty[3]);
-                        this.setEvccMinSoC(idProperty[3], state.val);
+                    case 'minSoc':
+                        this.log.info('Set minSoc on loadpointindex: ' + idProperty[3]);
+                        this.setEvccMinSoc(idProperty[3], state.val);
                         break;
-                    case 'targetSoC':
-                        this.log.info('Set evcc targetSoC on loadpointindex: ' + idProperty[3]);
-                        this.setEvccTargetSoC(idProperty[3], state.val);
+                    case 'targetSoc':
+                        this.log.info('Set evcc targetSoc on loadpointindex: ' + idProperty[3]);
+                        this.setEvccTargetSoc(idProperty[3], state.val);
                         break;
                     case 'minCurrent':
                         this.log.info('Set minCurrent on loadpointindex: ' + idProperty[3]);
@@ -140,11 +140,11 @@ class Evcc extends utils.Adapter {
                 //Global status Items
                 await this.setStateAsync('status.batteryConfigured', { val: response.data.result.batteryConfigured, ack: true });
                 await this.setStateAsync('status.batteryPower', { val: response.data.result.batteryPower, ack: true });
-                await this.setStateAsync('status.batterySoC', { val: response.data.result.batterySoC, ack: true });
+                await this.setStateAsync('status.batterySoc', { val: response.data.result.batterySoc, ack: true });
                 await this.setStateAsync('status.gridConfigured', { val: response.data.result.gridConfigured, ack: true });
                 await this.setStateAsync('status.gridCurrents', { val: JSON.stringify(response.data.result.gridCurrents), ack: true });
                 await this.setStateAsync('status.homePower', { val: response.data.result.homePower, ack: true });
-                await this.setStateAsync('status.prioritySoC', { val: response.data.result.prioritySoC, ack: true });
+                await this.setStateAsync('status.prioritySoc', { val: response.data.result.prioritySoc, ack: true });
                 await this.setStateAsync('status.pvConfigured', { val: response.data.result.pvConfigured, ack: true });
                 await this.setStateAsync('status.pvPower', { val: response.data.result.pvPower, ack: true });
                 await this.setStateAsync('status.siteTitle', { val: response.data.result.siteTitle, ack: true });
@@ -172,7 +172,9 @@ class Evcc extends utils.Adapter {
 
     async setLoadPointdata(loadpoint: Loadpoint, index: number): Promise<void> {
         //Ladepunkt kann es X fach geben
-        this.log.debug('Ladepunkt mit index ' + 'loadpoint.' + index + ' gefunden');
+        index = index + 1;// +1 why Evcc starts with 1
+        this.log.debug('Ladepunkt mit index ' + 'loadpoint.' + index + ' gefunden...');
+
         if (this.maxLoadpointIndex < index) {
             //Ladepunkt noch nicht angelegt für diesen Instanzstart
             this.log.info('Lege neuen Ladepunkt an mit Index: ' + index);
@@ -196,10 +198,10 @@ class Evcc extends utils.Adapter {
         await this.setStateAsync('loadpoint.' + index + '.status.hasVehicle', { val: loadpoint.hasVehicle, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.maxCurrent', { val: loadpoint.maxCurrent, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.minCurrent', { val: loadpoint.minCurrent, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.control.minSoC', { val: loadpoint.minSoC, ack: true });
+        await this.setStateAsync('loadpoint.' + index + '.control.minSoc', { val: loadpoint.minSoc, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.status.mode', { val: loadpoint.mode, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.phases', { val: loadpoint.phases, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.control.targetSoC', { val: loadpoint.targetSoC, ack: true });
+        await this.setStateAsync('loadpoint.' + index + '.control.targetSoc', { val: loadpoint.targetSoc, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.status.timerActive', { val: loadpoint.timerActive, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.status.timerProjectedEnd', { val: loadpoint.timerProjectedEnd, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.status.timerSet', { val: loadpoint.timerSet, ack: true });
@@ -208,7 +210,7 @@ class Evcc extends utils.Adapter {
         await this.setStateAsync('loadpoint.' + index + '.status.vehicleIdentity', { val: loadpoint.vehicleIdentity, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.status.vehiclePresent', { val: loadpoint.vehiclePresent, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.status.vehicleRange', { val: loadpoint.vehicleRange, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.vehicleSoC', { val: loadpoint.vehicleSoC, ack: true });
+        await this.setStateAsync('loadpoint.' + index + '.status.vehicleSoc', { val: loadpoint.vehicleSoc, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.status.vehicleTitle', { val: loadpoint.vehicleTitle, ack: true });
     }
 
@@ -266,10 +268,10 @@ class Evcc extends utils.Adapter {
         });
         this.subscribeStates('loadpoint.' + index + '.control.pv');
 
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.minSoC', {
+        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.minSoc', {
             type: 'state',
             common: {
-                name: 'minSoC',
+                name: 'minSoc',
                 type: 'number',
                 role: 'value.min',
                 read: true,
@@ -277,13 +279,13 @@ class Evcc extends utils.Adapter {
             },
             native: {},
         });
-        this.subscribeStates('loadpoint.' + index + '.control.minSoC');
+        this.subscribeStates('loadpoint.' + index + '.control.minSoc');
 
 
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.targetSoC', {
+        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.targetSoc', {
             type: 'state',
             common: {
-                name: 'targetSoC',
+                name: 'targetSoc',
                 type: 'number',
                 role: 'value',
                 read: true,
@@ -291,7 +293,7 @@ class Evcc extends utils.Adapter {
             },
             native: {},
         });
-        this.subscribeStates('loadpoint.' + index + '.control.targetSoC');
+        this.subscribeStates('loadpoint.' + index + '.control.targetSoc');
 
         await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.maxCurrent', {
             type: 'state',
@@ -597,10 +599,10 @@ class Evcc extends utils.Adapter {
             native: {},
         });
 
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.vehicleSoC', {
+        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.vehicleSoc', {
             type: 'state',
             common: {
-                name: 'vehicleSoC',
+                name: 'vehicleSoc',
                 type: 'number',
                 role: 'info.status',
                 read: true,
@@ -659,18 +661,18 @@ class Evcc extends utils.Adapter {
         });
     }
 
-    setEvccTargetSoC(index:string, value: ioBroker.StateValue): void {
-        this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/targetsoc/' + value);
-        axios.post('http://' + this.ip + '/api/loadpoints/' + index + '/targetsoc/' + value, {timeout: this.timeout}).then( () => {
+    setEvccTargetSoc(index:string, value: ioBroker.StateValue): void {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/targetSoc/' + value);
+        axios.post('http://' + this.ip + '/api/loadpoints/' + index + '/targetSoc/' + value, {timeout: this.timeout}).then( () => {
             this.log.info('Evcc update successful');
         }).catch(error => {
             this.log.error('5' + error.message)
         });
     }
 
-    setEvccMinSoC(index:string, value: ioBroker.StateValue): void {
-        this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/minsoc/' + value);
-        axios.post('http://' + this.ip + '/api/loadpoints/' + index + '/minsoc/' + value, {timeout: this.timeout}).then( () => {
+    setEvccMinSoc(index:string, value: ioBroker.StateValue): void {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/minSoc/' + value);
+        axios.post('http://' + this.ip + '/api/loadpoints/' + index + '/minSoc/' + value, {timeout: this.timeout}).then( () => {
             this.log.info('Evcc update successful');
         }).catch(error => {
             this.log.error('6' + error.message)
