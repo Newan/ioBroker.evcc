@@ -143,6 +143,7 @@ class Evcc extends utils.Adapter {
                 await this.setStateAsync('status.batterySoc', { val: response.data.result.batterySoc, ack: true });
                 await this.setStateAsync('status.gridConfigured', { val: response.data.result.gridConfigured, ack: true });
                 await this.setStateAsync('status.gridCurrents', { val: JSON.stringify(response.data.result.gridCurrents), ack: true });
+                await this.setStateAsync('status.gridPower', { val: response.data.result.gridPower, ack: true });
                 await this.setStateAsync('status.homePower', { val: response.data.result.homePower, ack: true });
                 await this.setStateAsync('status.prioritySoc', { val: response.data.result.prioritySoc, ack: true });
                 await this.setStateAsync('status.pvConfigured', { val: response.data.result.pvConfigured, ack: true });
