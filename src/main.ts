@@ -276,7 +276,7 @@ class Evcc extends utils.Adapter {
                 type: 'number',
                 role: 'value.min',
                 read: true,
-                write: false,
+                write: true,
             },
             native: {},
         });
@@ -290,7 +290,7 @@ class Evcc extends utils.Adapter {
                 type: 'number',
                 role: 'value',
                 read: true,
-                write: false,
+                write: true,
             },
             native: {},
         });
@@ -303,7 +303,7 @@ class Evcc extends utils.Adapter {
                 type: 'number',
                 role: 'value.max',
                 read: true,
-                write: false,
+                write: true,
             },
             native: {},
         });
@@ -316,7 +316,7 @@ class Evcc extends utils.Adapter {
                 type: 'number',
                 role: 'value',
                 read: true,
-                write: false,
+                write: true,
             },
             native: {},
         });
@@ -329,7 +329,7 @@ class Evcc extends utils.Adapter {
                 type: 'number',
                 role: 'value',
                 read: true,
-                write: false,
+                write: true,
             },
             native: {},
         });
