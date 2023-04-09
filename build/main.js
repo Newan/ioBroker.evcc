@@ -135,6 +135,14 @@ class Evcc extends utils.Adapter {
                         this.log.info('Set phases on loadpointindex: ' + idProperty[3]);
                         this.setEvccPhases(idProperty[3], state.val);
                         break;
+                    case 'disable_threshold':
+                        this.log.info('Set disbale threshold on loadpointindex: ' + idProperty[3]);
+                        this.setEvccDisableThreshold(idProperty[3], state.val);
+                        break;
+                    case 'disable_threshold':
+                        this.log.info('Set enable threshold on loadpointindex: ' + idProperty[3]);
+                        this.setEvccEnableThreshold(idProperty[3], state.val);
+                        break;
                     default:
                         this.log.debug(JSON.stringify(idProperty));
                         this.log.warn(`Event with state ${id} changed: ${state.val} (ack = ${state.ack}) not found`);
@@ -282,7 +290,7 @@ class Evcc extends utils.Adapter {
                 type: 'number',
                 role: 'value.min',
                 read: true,
-                write: false,
+                write: true,
             },
             native: {},
         });
@@ -294,7 +302,7 @@ class Evcc extends utils.Adapter {
                 type: 'number',
                 role: 'value',
                 read: true,
-                write: false,
+                write: true,
             },
             native: {},
         });
@@ -306,7 +314,7 @@ class Evcc extends utils.Adapter {
                 type: 'number',
                 role: 'value.max',
                 read: true,
-                write: false,
+                write: true,
             },
             native: {},
         });
@@ -318,7 +326,7 @@ class Evcc extends utils.Adapter {
                 type: 'number',
                 role: 'value',
                 read: true,
-                write: false,
+                write: true,
             },
             native: {},
         });
@@ -330,11 +338,35 @@ class Evcc extends utils.Adapter {
                 type: 'number',
                 role: 'value',
                 read: true,
-                write: false,
+                write: true,
             },
             native: {},
         });
         this.subscribeStates('loadpoint.' + index + '.control.phases');
+        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.enable_threshold', {
+            type: 'state',
+            common: {
+                name: 'enable_threshold',
+                type: 'number',
+                role: 'value',
+                read: false,
+                write: true,
+            },
+            native: {},
+        });
+        this.subscribeStates('loadpoint.' + index + '.control.enable_threshold');
+        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.disable_threshold', {
+            type: 'state',
+            common: {
+                name: 'disable_threshold',
+                type: 'number',
+                role: 'value',
+                read: false,
+                write: true,
+            },
+            native: {},
+        });
+        this.subscribeStates('loadpoint.' + index + '.control.disable_threshold');
         //Rest in status als Objekte
         await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.activePhases', {
             type: 'state',
@@ -669,6 +701,22 @@ class Evcc extends utils.Adapter {
     setEvccPhases(index, value) {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/phases/' + value);
         axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/phases/' + value, { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('9' + error.message);
+        });
+    }
+    setEvccDisableThreshold(index, value) {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/disable/threshold/' + value);
+        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/disable/threshold/' + value, { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('9' + error.message);
+        });
+    }
+    setEvccEnableThreshold(index, value) {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/enable/threshold/' + value);
+        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/disable/threshold/' + value, { timeout: this.timeout }).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
             this.log.error('9' + error.message);
