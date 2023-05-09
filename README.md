@@ -22,6 +22,9 @@ Forum: https://forum.iobroker.net/topic/49165/neuer-adapter-iobroker-evcc
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* fix for minSoc & targetSoc
+
 ### 0.0.7 (2023-01-15)
 * Update for evcc 1.11.x
 * Bugfix #4, change SoC names
