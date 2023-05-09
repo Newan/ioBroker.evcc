@@ -192,7 +192,7 @@ class Evcc extends utils.Adapter {
         }
 
         //Update der Werte
-        await this.setStateAsync('loadpoint.' + index + '.status.activePhases', { val: loadpoint.activePhases, ack: true });
+        await this.setStateAsync('loadpoint.' + index + '.status.activePhases', { val: loadpoint.phasesActive, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.status.chargeConfigured', { val: loadpoint.chargeConfigured, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.status.chargeCurrent', { val: loadpoint.chargeCurrent, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.status.chargeCurrents', { val: JSON.stringify(loadpoint.chargeCurrents), ack: true });

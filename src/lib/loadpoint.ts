@@ -1,5 +1,5 @@
 export interface Loadpoint {
-    activePhases: number; //3,
+    phasesActive: number; //3,
     chargeConfigured: boolean; //true,
     chargeCurrent: number; //0,
     chargeCurrents: string ; //[1,2,3],
