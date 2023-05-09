@@ -22,7 +22,7 @@ Forum: https://forum.iobroker.net/topic/49165/neuer-adapter-iobroker-evcc
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.8 (2023-05-09)
 * fix for minSoc & targetSoc
 
 ### 0.0.7 (2023-01-15)

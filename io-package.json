@@ -1,301 +1,314 @@
 {
-    "common": {
-        "name": "evcc",
-        "version": "0.0.7",
-        "news": {
-            "0.0.7": {
-                "en": "Update for evcc 1.11.x\nBugfix #4, change SoC names",
-                "de": "Update für evcc 1.11.x\nBugfix #4, SoC-Namen ändern",
-                "ru": "Обновление для evcc 1.11.x\nBugfix #4, изменить имена SoC",
-                "pt": "Atualização para evcc 1.11.x\nBugfix #4, alterar nomes de SoC",
-                "nl": "Update voor evcc 1.11\nBugfix #4, verander SoC namen",
-                "fr": "Mise à jour pour evcc 1.11.x\nBugfix #4, modifier les noms SoC",
-                "it": "Aggiornamento per evcc 1.11.x\nBugfix #4, cambia i nomi SoC",
-                "es": "Actualización para evcc 1.11.x\nBugfix #4, cambiar nombres SoC",
-                "pl": "Data dostępu do 1.11.x\nBugfix #4 zmienia nazwę na SoC",
-                "uk": "Оновлення для evcc 1.11.x\nBugfix #4, змінити імена SoC",
-                "zh-cn": "最新资料\nBugfix #4, 改变SC名称"
-            },
-            "0.0.5": {
-                "en": "update for latest-repository",
-                "de": "Update für latest-Repository",
-                "ru": "обновление для последнего репозитория",
-                "pt": "atualização para o repositório mais recente",
-                "nl": "update voor laatste-repository",
-                "fr": "mise à jour pour le dernier référentiel",
-                "it": "aggiornamento per l'ultimo repository",
-                "es": "actualización para el último repositorio",
-                "pl": "aktualizacja do najnowszego repozytorium",
-                "zh-cn": "更新最新存储库"
-            },
-            "0.0.4": {
-                "en": "first release",
-                "de": "erste veröffentlichung",
-                "ru": "первый релиз",
-                "pt": "primeiro lançamento",
-                "nl": "eerste vrijlating",
-                "fr": "première version",
-                "it": "primo rilascio",
-                "es": "primera liberación",
-                "pl": "pierwsze wydanie",
-                "zh-cn": "首次释放"
-            },
-            "0.0.3": {
-                "en": "(Newan) support evcc 0.9X - change to jsonConfig GUI",
-                "de": "(Newan) Unterstützung von evcc 0.9X - Wechsel zu jsonConfig GUI",
-                "ru": "(Newan) поддержка evcc 0.9X - изменение графического интерфейса jsonConfig",
-                "pt": "(Newan) suporte evcc 0.9X - mude para jsonConfig GUI",
-                "nl": "(Newan) ondersteuning voor evcc 0.9X - verander naar jsonConfig GUI",
-                "fr": "(Newan) prend en charge evcc 0.9X - passe à l'interface graphique jsonConfig",
-                "it": "(Newan) supporta evcc 0.9X - cambia in jsonConfig GUI",
-                "es": "(Newan) soporte evcc 0.9X - cambio a jsonConfig GUI",
-                "pl": "(Newan) obsługuje evcc 0.9X - zmiana na GUI jsonConfig",
-                "zh-cn": "(Newan) 支持 evcc 0.9X - 更改为 jsonConfig GUI"
-            },
-            "0.0.1": {
-                "en": "initial release",
-                "de": "Erstveröffentlichung",
-                "ru": "Начальная версия",
-                "pt": "lançamento inicial",
-                "nl": "Eerste uitgave",
-                "fr": "Première version",
-                "it": "Versione iniziale",
-                "es": "Versión inicial",
-                "pl": "Pierwsze wydanie",
-                "zh-cn": "首次出版"
-            }
-        },
-        "titleLang": {
-            "en": "EVCC",
-            "de": "EVCC",
-            "ru": "EVCC",
-            "pt": "EVCC",
-            "nl": "EVCC",
-            "fr": "EVCC",
-            "it": "EVCC",
-            "es": "EVCC",
-            "pl": "EVCC",
-            "zh-cn": "EVCC"
-        },
-        "desc": {
-            "en": "Controll evcc over rest api",
-            "de": "Kontrollieren Sie evcc über Ruhe-API",
-            "ru": "Управляйте evcc через api отдыха",
-            "pt": "Controlar evcc sobre api resto",
-            "nl": "Controle evcc over rust api",
-            "fr": "Contrôler evcc sur rest api",
-            "it": "Controllo evcc su resto api",
-            "es": "Controlar evcc sobre resto api",
-            "pl": "Controll evcc nad restapi",
-            "zh-cn": "控制 evcc over rest api"
-        },
-        "authors": [
-            "Newan <info@newan.de>"
-        ],
-        "keywords": [
-            "evcc pv charge"
-        ],
-        "license": "MIT",
-        "platform": "Javascript/Node.js",
-        "main": "build/main.js",
-        "icon": "evcc.png",
-        "enabled": true,
-        "extIcon": "https://raw.githubusercontent.com/Newan/ioBroker.evcc/master/admin/evcc.png",
-        "readme": "https://github.com/Newan/ioBroker.evcc/blob/master/README.md",
-        "loglevel": "info",
-        "mode": "daemon",
-        "type": "energy",
-        "compact": true,
-        "connectionType": "local",
-        "dataSource": "poll",
-        "materialize": true,
-        "adminUI": {
-            "config": "json"
-        },
-        "dependencies": [
-            {
-                "js-controller": ">=2.0.0"
-            }
-        ]
+  "common": {
+    "name": "evcc",
+    "version": "0.0.8",
+    "news": {
+      "0.0.8": {
+        "en": "fix for minSoc & targetSoc",
+        "de": "fix für minSoc & Ziel Soja",
+        "ru": "исправить для minSoc & target Соц",
+        "pt": "correção para minSoc & target Soc",
+        "nl": "vertaling: Socquet",
+        "fr": "fix pour minSoc & cible Soc",
+        "it": "correzione per minSoc & target Soc",
+        "es": "fijado para minSoc & target Soc",
+        "pl": "naprawa minSoc & target Soc",
+        "uk": "фіксувати для MinSoc & цілей Соц",
+        "zh-cn": "fix 采矿和目标 Soc"
+      },
+      "0.0.7": {
+        "en": "Update for evcc 1.11.x\nBugfix #4, change SoC names",
+        "de": "Update für evcc 1.11.x\nBugfix #4, SoC-Namen ändern",
+        "ru": "Обновление для evcc 1.11.x\nBugfix #4, изменить имена SoC",
+        "pt": "Atualização para evcc 1.11.x\nBugfix #4, alterar nomes de SoC",
+        "nl": "Update voor evcc 1.11\nBugfix #4, verander SoC namen",
+        "fr": "Mise à jour pour evcc 1.11.x\nBugfix #4, modifier les noms SoC",
+        "it": "Aggiornamento per evcc 1.11.x\nBugfix #4, cambia i nomi SoC",
+        "es": "Actualización para evcc 1.11.x\nBugfix #4, cambiar nombres SoC",
+        "pl": "Data dostępu do 1.11.x\nBugfix #4 zmienia nazwę na SoC",
+        "uk": "Оновлення для evcc 1.11.x\nBugfix #4, змінити імена SoC",
+        "zh-cn": "最新资料\nBugfix #4, 改变SC名称"
+      },
+      "0.0.5": {
+        "en": "update for latest-repository",
+        "de": "Update für latest-Repository",
+        "ru": "обновление для последнего репозитория",
+        "pt": "atualização para o repositório mais recente",
+        "nl": "update voor laatste-repository",
+        "fr": "mise à jour pour le dernier référentiel",
+        "it": "aggiornamento per l'ultimo repository",
+        "es": "actualización para el último repositorio",
+        "pl": "aktualizacja do najnowszego repozytorium",
+        "zh-cn": "更新最新存储库"
+      },
+      "0.0.4": {
+        "en": "first release",
+        "de": "erste veröffentlichung",
+        "ru": "первый релиз",
+        "pt": "primeiro lançamento",
+        "nl": "eerste vrijlating",
+        "fr": "première version",
+        "it": "primo rilascio",
+        "es": "primera liberación",
+        "pl": "pierwsze wydanie",
+        "zh-cn": "首次释放"
+      },
+      "0.0.3": {
+        "en": "(Newan) support evcc 0.9X - change to jsonConfig GUI",
+        "de": "(Newan) Unterstützung von evcc 0.9X - Wechsel zu jsonConfig GUI",
+        "ru": "(Newan) поддержка evcc 0.9X - изменение графического интерфейса jsonConfig",
+        "pt": "(Newan) suporte evcc 0.9X - mude para jsonConfig GUI",
+        "nl": "(Newan) ondersteuning voor evcc 0.9X - verander naar jsonConfig GUI",
+        "fr": "(Newan) prend en charge evcc 0.9X - passe à l'interface graphique jsonConfig",
+        "it": "(Newan) supporta evcc 0.9X - cambia in jsonConfig GUI",
+        "es": "(Newan) soporte evcc 0.9X - cambio a jsonConfig GUI",
+        "pl": "(Newan) obsługuje evcc 0.9X - zmiana na GUI jsonConfig",
+        "zh-cn": "(Newan) 支持 evcc 0.9X - 更改为 jsonConfig GUI"
+      },
+      "0.0.1": {
+        "en": "initial release",
+        "de": "Erstveröffentlichung",
+        "ru": "Начальная версия",
+        "pt": "lançamento inicial",
+        "nl": "Eerste uitgave",
+        "fr": "Première version",
+        "it": "Versione iniziale",
+        "es": "Versión inicial",
+        "pl": "Pierwsze wydanie",
+        "zh-cn": "首次出版"
+      }
     },
-    "native": {
-        "polltime": 100,
-        "ip": "127.0.0.1",
-        "port": "7070"
+    "titleLang": {
+      "en": "EVCC",
+      "de": "EVCC",
+      "ru": "EVCC",
+      "pt": "EVCC",
+      "nl": "EVCC",
+      "fr": "EVCC",
+      "it": "EVCC",
+      "es": "EVCC",
+      "pl": "EVCC",
+      "zh-cn": "EVCC"
     },
-    "objects": [],
-    "instanceObjects": [
-        {
-            "_id": "info",
-            "type": "channel",
-            "common": {
-                "name": "Information"
-            },
-            "native": {}
-        },
-        {
-            "_id": "info.connection",
-            "type": "state",
-            "common": {
-                "role": "indicator.connected",
-                "name": "If communication with evcc works",
-                "type": "boolean",
-                "read": true,
-                "write": false,
-                "def": false
-            },
-            "native": {}
-        },
-        {
-            "_id": "status",
-            "type": "channel",
-            "common": {
-                "name": "Status"
-            },
-            "native": {}
-        },
-        {
-            "_id": "status.batteryConfigured",
-            "type": "state",
-            "common": {
-                "role": "state",
-                "name": "batteryConfigured",
-                "type": "boolean",
-                "read": true,
-                "write": false,
-                "def": false
-            },
-            "native": {}
-        },
-        {
-            "_id": "status.batteryPower",
-            "type": "state",
-            "common": {
-                "role": "state",
-                "name": "batteryPower",
-                "type": "number",
-                "read": true,
-                "write": false,
-                "def": 0
-            },
-            "native": {}
-        },
-        {
-            "_id": "status.batterySoc",
-            "type": "state",
-            "common": {
-                "role": "state",
-                "name": "batterySoc",
-                "type": "number",
-                "read": true,
-                "write": false,
-                "def": 0
-            },
-            "native": {}
-        },
-        {
-            "_id": "status.gridConfigured",
-            "type": "state",
-            "common": {
-                "role": "state",
-                "name": "gridConfigured",
-                "type": "boolean",
-                "read": true,
-                "write": false,
-                "def": false
-            },
-            "native": {}
-        },
-        {
-            "_id": "status.gridCurrents",
-            "type": "state",
-            "common": {
-                "role": "state",
-                "name": "gridCurrents",
-                "type": "string",
-                "read": true,
-                "write": false,
-                "def": ""
-            },
-            "native": {}
-        },
-        {
-            "_id": "status.gridPower",
-            "type": "state",
-            "common": {
-                "role": "state",
-                "name": "gridPower",
-                "type": "number",
-                "read": true,
-                "write": false,
-                "def": 0
-            },
-            "native": {}
-        },
-        {
-            "_id": "status.homePower",
-            "type": "state",
-            "common": {
-                "role": "state",
-                "name": "homePower",
-                "type": "number",
-                "read": true,
-                "write": false,
-                "def": 0
-            },
-            "native": {}
-        },
-        {
-            "_id": "status.prioritySoc",
-            "type": "state",
-            "common": {
-                "role": "state",
-                "name": "prioritySoc",
-                "type": "number",
-                "read": true,
-                "write": false,
-                "def": 0
-            },
-            "native": {}
-        },
-        {
-            "_id": "status.pvConfigured",
-            "type": "state",
-            "common": {
-                "role": "state",
-                "name": "pvConfigured",
-                "type": "boolean",
-                "read": true,
-                "write": false,
-                "def": false
-            },
-            "native": {}
-        },
-        {
-            "_id": "status.pvPower",
-            "type": "state",
-            "common": {
-                "role": "state",
-                "name": "pvPower",
-                "type": "number",
-                "read": true,
-                "write": false,
-                "def": 0
-            },
-            "native": {}
-        },
-        {
-            "_id": "status.siteTitle",
-            "type": "state",
-            "common": {
-                "role": "state",
-                "name": "siteTitle",
-                "type": "string",
-                "read": true,
-                "write": false,
-                "def": ""
-            },
-            "native": {}
-        }
+    "desc": {
+      "en": "Controll evcc over rest api",
+      "de": "Kontrollieren Sie evcc über Ruhe-API",
+      "ru": "Управляйте evcc через api отдыха",
+      "pt": "Controlar evcc sobre api resto",
+      "nl": "Controle evcc over rust api",
+      "fr": "Contrôler evcc sur rest api",
+      "it": "Controllo evcc su resto api",
+      "es": "Controlar evcc sobre resto api",
+      "pl": "Controll evcc nad restapi",
+      "zh-cn": "控制 evcc over rest api"
+    },
+    "authors": [
+      "Newan <info@newan.de>"
+    ],
+    "keywords": [
+      "evcc pv charge"
+    ],
+    "license": "MIT",
+    "platform": "Javascript/Node.js",
+    "main": "build/main.js",
+    "icon": "evcc.png",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/Newan/ioBroker.evcc/master/admin/evcc.png",
+    "readme": "https://github.com/Newan/ioBroker.evcc/blob/master/README.md",
+    "loglevel": "info",
+    "mode": "daemon",
+    "type": "energy",
+    "compact": true,
+    "connectionType": "local",
+    "dataSource": "poll",
+    "materialize": true,
+    "adminUI": {
+      "config": "json"
+    },
+    "dependencies": [
+      {
+        "js-controller": ">=2.0.0"
+      }
     ]
+  },
+  "native": {
+    "polltime": 100,
+    "ip": "127.0.0.1",
+    "port": "7070"
+  },
+  "objects": [],
+  "instanceObjects": [
+    {
+      "_id": "info",
+      "type": "channel",
+      "common": {
+        "name": "Information"
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "role": "indicator.connected",
+        "name": "If communication with evcc works",
+        "type": "boolean",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    },
+    {
+      "_id": "status",
+      "type": "channel",
+      "common": {
+        "name": "Status"
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.batteryConfigured",
+      "type": "state",
+      "common": {
+        "role": "state",
+        "name": "batteryConfigured",
+        "type": "boolean",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.batteryPower",
+      "type": "state",
+      "common": {
+        "role": "state",
+        "name": "batteryPower",
+        "type": "number",
+        "read": true,
+        "write": false,
+        "def": 0
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.batterySoc",
+      "type": "state",
+      "common": {
+        "role": "state",
+        "name": "batterySoc",
+        "type": "number",
+        "read": true,
+        "write": false,
+        "def": 0
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.gridConfigured",
+      "type": "state",
+      "common": {
+        "role": "state",
+        "name": "gridConfigured",
+        "type": "boolean",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.gridCurrents",
+      "type": "state",
+      "common": {
+        "role": "state",
+        "name": "gridCurrents",
+        "type": "string",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.gridPower",
+      "type": "state",
+      "common": {
+        "role": "state",
+        "name": "gridPower",
+        "type": "number",
+        "read": true,
+        "write": false,
+        "def": 0
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.homePower",
+      "type": "state",
+      "common": {
+        "role": "state",
+        "name": "homePower",
+        "type": "number",
+        "read": true,
+        "write": false,
+        "def": 0
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.prioritySoc",
+      "type": "state",
+      "common": {
+        "role": "state",
+        "name": "prioritySoc",
+        "type": "number",
+        "read": true,
+        "write": false,
+        "def": 0
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.pvConfigured",
+      "type": "state",
+      "common": {
+        "role": "state",
+        "name": "pvConfigured",
+        "type": "boolean",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.pvPower",
+      "type": "state",
+      "common": {
+        "role": "state",
+        "name": "pvPower",
+        "type": "number",
+        "read": true,
+        "write": false,
+        "def": 0
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.siteTitle",
+      "type": "state",
+      "common": {
+        "role": "state",
+        "name": "siteTitle",
+        "type": "string",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    }
+  ]
 }
