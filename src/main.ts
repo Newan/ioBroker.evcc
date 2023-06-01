@@ -195,8 +195,18 @@ class Evcc extends utils.Adapter {
 
         try {
             for (let lpEntry in loadpoint) {
-                let lpType = typeof loadpoint[lpEntry]; // get Type of Variable as String, like string/number/boolean
+                let lpType = typeof loaddata[lpEntry]; // get Type of Variable as String, like string/number/boolean
 
+                let res =  loaddata[lpEntry];
+
+                if (lpType == 'object') {
+                    res = JSON.stringify(res);
+                }
+
+                if (lpEntry == 'chargeDuration' || lpEntry == 'connectedDuration') {
+                    res = this.milisekundenumwandeln(res);
+                    lpType = 'string';
+                }
                 await this.extendObjectAsync(`loadpoint.${index}.status.${lpEntry}`, {
                     type: 'state',
                     common: {
@@ -208,12 +218,7 @@ class Evcc extends utils.Adapter {
                     },
                     native: {},
                 });
-
-                if (lpType == 'object') {
-                    await this.setState(`loadpoint.${index}.status.${lpEntry}`, JSON.stringify(loadpoint[lpEntry]), true);
-                } else {
-                    await this.setState(`loadpoint.${index}.status.${lpEntry}`, loadpoint[lpEntry], true);
-                }
+                await this.setState(`loadpoint.${index}.status.${lpEntry}`, res, true);             
             }
         } catch (err) {
             this.log.warn(`Generate State problem loadpoint.${index} JSON.stringify(${err})`);
@@ -221,10 +226,20 @@ class Evcc extends utils.Adapter {
     }
 
     async cre_status(daten) {
-
         try {
             for (let lpEntry in daten) {
                 let lpType = typeof daten[lpEntry]; // get Type of Variable as String, like string/number/boolean
+                let lpData;
+
+                if (lpEntry == 'result') {
+                    continue;
+                }
+
+                if (lpType == 'object') {
+                    lpData = JSON.stringify(daten[lpEntry]);
+                } else {
+                    lpData = daten[lpEntry]
+                }
 
                 await this.extendObjectAsync(`status.${lpEntry}`, {
                     type: 'state',
@@ -237,16 +252,44 @@ class Evcc extends utils.Adapter {
                     },
                     native: {},
                 });
-                if (lpType == 'object') {
-                    await this.setState(`status.${lpEntry}`, JSON.stringify(daten[lpEntry]), true);
-                } else {
-                    await this.setState(`status.${lpEntry}`, daten[lpEntry], true);
-                }
-            }
+
+                await this.setState(`status.${lpEntry}`, lpData, true);
         } catch (err) {
             this.log.warn(`Generate State problem loadpoint.${index} JSON.stringify(${err})`);
         }
     }
+    
+    milisekundenumwandeln(nanoseconds) {
+        let seconds = nanoseconds / 1000000000;
+
+        let days = Math.floor(seconds / (24 * 3600));
+        let hours = Math.floor((seconds % (24 * 3600)) / 3600);
+        let minutes = Math.floor((seconds % 3600) / 60);
+        let remainingSeconds = Math.round(seconds % 60);
+
+        if (days < 10) {
+            days = "0" + days;
+        }
+
+        if (hours < 10) {
+            hours = "0" + hours;
+        }
+
+        if (minutes < 10) {
+            minutes = "0" + minutes;
+        }
+
+        if (remainingSeconds < 10) {
+            remainingSeconds = "0" + remainingSeconds;
+        }
+
+        if (days > 0) {
+            return `${days}:${hours}:${minutes}:${remainingSeconds}`;
+        } else {
+            return `${hours}:${minutes}:${remainingSeconds}`;
+        }
+    }
+    
     async createLoadPoint(index :number): Promise<void> {
         //Control Objects und Buttons:
         await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.off', {
