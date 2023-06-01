@@ -146,17 +146,7 @@ class Evcc extends utils.Adapter {
                 this.log.debug('Get-Data from evcc:' + JSON.stringify(response.data));
 
                 //Global status Items
-                await this.setStateAsync('status.batteryConfigured', { val: response.data.result.batteryConfigured, ack: true });
-                await this.setStateAsync('status.batteryPower', { val: response.data.result.batteryPower, ack: true });
-                await this.setStateAsync('status.batterySoc', { val: response.data.result.batterySoc, ack: true });
-                await this.setStateAsync('status.gridConfigured', { val: response.data.result.gridConfigured, ack: true });
-                await this.setStateAsync('status.gridCurrents', { val: JSON.stringify(response.data.result.gridCurrents), ack: true });
-                await this.setStateAsync('status.gridPower', { val: response.data.result.gridPower, ack: true });
-                await this.setStateAsync('status.homePower', { val: response.data.result.homePower, ack: true });
-                await this.setStateAsync('status.prioritySoc', { val: response.data.result.prioritySoc, ack: true });
-                await this.setStateAsync('status.pvConfigured', { val: response.data.result.pvConfigured, ack: true });
-                await this.setStateAsync('status.pvPower', { val: response.data.result.pvPower, ack: true });
-                await this.setStateAsync('status.siteTitle', { val: response.data.result.siteTitle, ack: true });
+                this.cre_status(response.data);
 
                 //Laden jeden Ladepunk einzeln
                 const tmpListLoadpoints: Loadpoint[] = response.data.result.loadpoints;
@@ -192,39 +182,71 @@ class Evcc extends utils.Adapter {
         }
 
         //Update der Werte
-        await this.setStateAsync('loadpoint.' + index + '.status.activePhases', { val: loadpoint.phasesActive, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.chargeConfigured', { val: loadpoint.chargeConfigured, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.chargeCurrent', { val: loadpoint.chargeCurrent, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.chargeCurrents', { val: JSON.stringify(loadpoint.chargeCurrents), ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.chargeDuration', { val: loadpoint.chargeDuration, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.chargePower', { val: loadpoint.chargePower, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.chargeRemainingDuration', { val: loadpoint.chargeRemainingDuration, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.chargedEnergy', { val: loadpoint.chargedEnergy, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.charging', { val: loadpoint.charging, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.connected', { val: loadpoint.connected, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.connectedDuration', { val: loadpoint.connectedDuration, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.enabled', { val: loadpoint.enabled, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.hasVehicle', { val: loadpoint.hasVehicle, ack: true });
+        
         await this.setStateAsync('loadpoint.' + index + '.control.maxCurrent', { val: loadpoint.maxCurrent, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.minCurrent', { val: loadpoint.minCurrent, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.minSoc', { val: loadpoint.minSoc, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.mode', { val: loadpoint.mode, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.phases', { val: loadpoint.phases, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.targetSoc', { val: loadpoint.targetSoc, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.timerActive', { val: loadpoint.timerActive, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.timerProjectedEnd', { val: loadpoint.timerProjectedEnd, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.timerSet', { val: loadpoint.timerSet, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.title', { val: loadpoint.title, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.vehicleCapacity', { val: loadpoint.vehicleCapacity, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.vehicleIdentity', { val: loadpoint.vehicleIdentity, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.vehiclePresent', { val: loadpoint.vehiclePresent, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.vehicleRange', { val: loadpoint.vehicleRange, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.vehicleSoc', { val: loadpoint.vehicleSoc, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.vehicleTitle', { val: loadpoint.vehicleTitle, ack: true });
+        
+        this.cre_status_idx(loadpoint,index);
+    }
+    async cre_status_idx(loadpoint,index) {
 
+        try {
+            for (let lpEntry in loadpoint) {
+                let lpType = typeof loadpoint[lpEntry]; // get Type of Variable as String, like string/number/boolean
 
+                await this.extendObjectAsync(`loadpoint.${index}.status.${lpEntry}`, {
+                    type: 'state',
+                    common: {
+                        name: lpEntry,
+                        type: lpType,
+                        read: true,
+                        write: false,
+                        role: 'value',
+                    },
+                    native: {},
+                });
+
+                if (lpType == 'object') {
+                    await this.setState(`loadpoint.${index}.status.${lpEntry}`, JSON.stringify(loadpoint[lpEntry]), true);
+                } else {
+                    await this.setState(`loadpoint.${index}.status.${lpEntry}`, loadpoint[lpEntry], true);
+                }
+            }
+        } catch (err) {
+            this.log.warn(`Generate State problem loadpoint.${index} JSON.stringify(${err})`);
+        }
     }
 
+    async cre_status(daten) {
+
+        try {
+            for (let lpEntry in daten) {
+                let lpType = typeof daten[lpEntry]; // get Type of Variable as String, like string/number/boolean
+
+                await this.extendObjectAsync(`status.${lpEntry}`, {
+                    type: 'state',
+                    common: {
+                        name: lpEntry,
+                        type: lpType,
+                        read: true,
+                        write: false,
+                        role: 'value',
+                    },
+                    native: {},
+                });
+                if (lpType == 'object') {
+                    await this.setState(`status.${lpEntry}`, JSON.stringify(daten[lpEntry]), true);
+                } else {
+                    await this.setState(`status.${lpEntry}`, daten[lpEntry], true);
+                }
+            }
+        } catch (err) {
+            this.log.warn(`Generate State problem loadpoint.${index} JSON.stringify(${err})`);
+        }
+    }
     async createLoadPoint(index :number): Promise<void> {
         //Control Objects und Buttons:
         await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.off', {
