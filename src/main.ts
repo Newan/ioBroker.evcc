@@ -146,7 +146,7 @@ class Evcc extends utils.Adapter {
                 this.log.debug('Get-Data from evcc:' + JSON.stringify(response.data));
 
                 //Global status Items
-                this.cre_status(response.data);
+                this.cre_status(response.data.result);
 
                 //Laden jeden Ladepunk einzeln
                 const tmpListLoadpoints: Loadpoint[] = response.data.result.loadpoints;
