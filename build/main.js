@@ -1,4 +1,5 @@
 "use strict";
+const axios = require("axios");
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
@@ -160,17 +161,8 @@ class Evcc extends utils.Adapter {
             (0, axios_1.default)('http://' + this.ip + '/api/state', { timeout: this.timeout }).then(async (response) => {
                 this.log.debug('Get-Data from evcc:' + JSON.stringify(response.data));
                 //Global status Items
-                await this.setStateAsync('status.batteryConfigured', { val: response.data.result.batteryConfigured, ack: true });
-                await this.setStateAsync('status.batteryPower', { val: response.data.result.batteryPower, ack: true });
-                await this.setStateAsync('status.batterySoc', { val: response.data.result.batterySoc, ack: true });
-                await this.setStateAsync('status.gridConfigured', { val: response.data.result.gridConfigured, ack: true });
-                await this.setStateAsync('status.gridCurrents', { val: JSON.stringify(response.data.result.gridCurrents), ack: true });
-                await this.setStateAsync('status.gridPower', { val: response.data.result.gridPower, ack: true });
-                await this.setStateAsync('status.homePower', { val: response.data.result.homePower, ack: true });
-                await this.setStateAsync('status.prioritySoc', { val: response.data.result.prioritySoc, ack: true });
-                await this.setStateAsync('status.pvConfigured', { val: response.data.result.pvConfigured, ack: true });
-                await this.setStateAsync('status.pvPower', { val: response.data.result.pvPower, ack: true });
-                await this.setStateAsync('status.siteTitle', { val: response.data.result.siteTitle, ack: true });
+                this.cre_status(response.data.result);
+
                 //Laden jeden Ladepunk einzeln
                 const tmpListLoadpoints = response.data.result.loadpoints;
                 tmpListLoadpoints.forEach(async (loadpoint, index) => {
@@ -201,38 +193,128 @@ class Evcc extends utils.Adapter {
             this.log.info('Lege neuen Ladepunkt an mit Index: ' + index);
             await this.createLoadPoint(index);
             this.maxLoadpointIndex = index;
+
+
         }
+
+        this.cre_status_idx(loadpoint,index);
         //Update der Werte
-        await this.setStateAsync('loadpoint.' + index + '.status.activePhases', { val: loadpoint.phasesActive, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.chargeConfigured', { val: loadpoint.chargeConfigured, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.chargeCurrent', { val: loadpoint.chargeCurrent, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.chargeCurrents', { val: JSON.stringify(loadpoint.chargeCurrents), ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.chargeDuration', { val: loadpoint.chargeDuration, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.chargePower', { val: loadpoint.chargePower, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.chargeRemainingDuration', { val: loadpoint.chargeRemainingDuration, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.chargedEnergy', { val: loadpoint.chargedEnergy, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.charging', { val: loadpoint.charging, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.connected', { val: loadpoint.connected, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.connectedDuration', { val: loadpoint.connectedDuration, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.enabled', { val: loadpoint.enabled, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.hasVehicle', { val: loadpoint.hasVehicle, ack: true });
+
         await this.setStateAsync('loadpoint.' + index + '.control.maxCurrent', { val: loadpoint.maxCurrent, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.minCurrent', { val: loadpoint.minCurrent, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.minSoc', { val: loadpoint.minSoc, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.mode', { val: loadpoint.mode, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.phases', { val: loadpoint.phases, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.targetSoc', { val: loadpoint.targetSoc, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.timerActive', { val: loadpoint.timerActive, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.timerProjectedEnd', { val: loadpoint.timerProjectedEnd, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.timerSet', { val: loadpoint.timerSet, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.title', { val: loadpoint.title, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.vehicleCapacity', { val: loadpoint.vehicleCapacity, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.vehicleIdentity', { val: loadpoint.vehicleIdentity, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.vehiclePresent', { val: loadpoint.vehiclePresent, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.vehicleRange', { val: loadpoint.vehicleRange, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.vehicleSoc', { val: loadpoint.vehicleSoc, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.status.vehicleTitle', { val: loadpoint.vehicleTitle, ack: true });
+
     }
+
+
+
+    async cre_status_idx(loaddata, index) {
+
+        try {
+            for (let lpEntry in loaddata) {
+                let lpType = typeof loaddata[lpEntry]; // get Type of Variable as String, like string/number/boolean
+
+                let res =  loaddata[lpEntry];
+
+                if (lpType == 'object') {
+                    res = JSON.stringify(res);
+                }
+
+                if (lpEntry == 'chargeDuration' || lpEntry == 'connectedDuration') {
+                    res = this.milisekundenumwandeln(res);
+                    lpType = 'string';
+                }
+
+
+                await this.extendObjectAsync(`loadpoint.${index}.status.${lpEntry}`, {
+                    type: 'state',
+                    common: {
+                        name: lpEntry,
+                        type: lpType,
+                        read: true,
+                        write: false,
+                        role: 'value',
+                    },
+                    native: {},
+                });
+
+                await this.setState(`loadpoint.${index}.status.${lpEntry}`, res, true);
+
+            }
+        } catch (err) {
+            this.log.warn(`Generate State problem loadpoint.${index} JSON.stringify(${err})`);
+        }
+    }
+
+    milisekundenumwandeln(nanoseconds) {
+        let seconds = nanoseconds / 1000000000;
+
+        let days = Math.floor(seconds / (24 * 3600));
+        let hours = Math.floor((seconds % (24 * 3600)) / 3600);
+        let minutes = Math.floor((seconds % 3600) / 60);
+        let remainingSeconds = Math.round(seconds % 60);
+
+        if (days < 10) {
+            days = "0" + days;
+        }
+
+        if (hours < 10) {
+            hours = "0" + hours;
+        }
+
+        if (minutes < 10) {
+            minutes = "0" + minutes;
+        }
+
+        if (remainingSeconds < 10) {
+            remainingSeconds = "0" + remainingSeconds;
+        }
+
+        if (days > 0) {
+            return `${days}:${hours}:${minutes}:${remainingSeconds}`;
+        } else {
+            return `${hours}:${minutes}:${remainingSeconds}`;
+        }
+
+    }
+
+
+    async cre_status(daten) {
+
+        try {
+            for (let lpEntry in daten) {
+                let lpType = typeof daten[lpEntry]; // get Type of Variable as String, like string/number/boolean
+                let lpData;
+
+                if (lpEntry !== 'result') {
+                    if (lpType == 'object') {
+                        lpData = JSON.stringify(daten[lpEntry]);
+                    } else {
+                        lpData = daten[lpEntry]
+                    }
+
+                    await this.extendObjectAsync(`status.${lpEntry}`, {
+                        type: 'state',
+                        common: {
+                            name: lpEntry,
+                            type: lpType,
+                            read: true,
+                            write: false,
+                            role: 'value',
+                        },
+                        native: {},
+                    });
+
+                    await this.setState(`status.${lpEntry}`, lpData, true);
+                }
+            }
+        } catch (err) {
+            this.log.warn(`Generate State problem loadpoint.${index} JSON.stringify(${err})`);
+        }
+    }
+
     async createLoadPoint(index) {
         //Control Objects und Buttons:
         await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.off', {
@@ -368,270 +450,8 @@ class Evcc extends utils.Adapter {
         });
         this.subscribeStates('loadpoint.' + index + '.control.disable_threshold');
         //Rest in status als Objekte
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.activePhases', {
-            type: 'state',
-            common: {
-                name: 'activePhases',
-                type: 'number',
-                role: 'value',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.chargeConfigured', {
-            type: 'state',
-            common: {
-                name: 'chargeConfigured',
-                type: 'boolean',
-                role: 'value.current',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.chargeCurrent', {
-            type: 'state',
-            common: {
-                name: 'chargeCurrent',
-                type: 'number',
-                role: 'value.current',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.chargeCurrents', {
-            type: 'state',
-            common: {
-                name: 'chargeCurrents',
-                type: 'string',
-                role: 'value.current',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.chargeDuration', {
-            type: 'state',
-            common: {
-                name: 'chargeDuration',
-                type: 'number',
-                role: 'value.current',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.chargePower', {
-            type: 'state',
-            common: {
-                name: 'chargePower',
-                type: 'number',
-                role: 'value.current',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.chargeRemainingDuration', {
-            type: 'state',
-            common: {
-                name: 'chargeRemainingDuration',
-                type: 'number',
-                role: 'value.current',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.chargedEnergy', {
-            type: 'state',
-            common: {
-                name: 'chargedEnergy',
-                type: 'number',
-                role: 'value.current',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.charging', {
-            type: 'state',
-            common: {
-                name: 'charging',
-                type: 'boolean',
-                role: 'value.current',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.connected', {
-            type: 'state',
-            common: {
-                name: 'connected',
-                type: 'boolean',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.connectedDuration', {
-            type: 'state',
-            common: {
-                name: 'connectedDuration',
-                type: 'number',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.enabled', {
-            type: 'state',
-            common: {
-                name: 'enabled',
-                type: 'boolean',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.hasVehicle', {
-            type: 'state',
-            common: {
-                name: 'hasVehicle',
-                type: 'boolean',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.mode', {
-            type: 'state',
-            common: {
-                name: 'mode',
-                type: 'string',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.timerActive', {
-            type: 'state',
-            common: {
-                name: 'timerActive',
-                type: 'boolean',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.timerProjectedEnd', {
-            type: 'state',
-            common: {
-                name: 'timerProjectedEnd',
-                type: 'string',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.timerSet', {
-            type: 'state',
-            common: {
-                name: 'timerSet',
-                type: 'boolean',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.title', {
-            type: 'state',
-            common: {
-                name: 'title',
-                type: 'string',
-                role: 'info.name',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.vehicleCapacity', {
-            type: 'state',
-            common: {
-                name: 'vehicleCapacity',
-                type: 'number',
-                role: 'info.name',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.vehicleIdentity', {
-            type: 'state',
-            common: {
-                name: 'vehicleIdentity',
-                type: 'string',
-                role: 'info.name',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.vehiclePresent', {
-            type: 'state',
-            common: {
-                name: 'vehiclePresent',
-                type: 'boolean',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.vehicleRange', {
-            type: 'state',
-            common: {
-                name: 'vehicleRange',
-                type: 'number',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.vehicleSoc', {
-            type: 'state',
-            common: {
-                name: 'vehicleSoc',
-                type: 'number',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.vehicleTitle', {
-            type: 'state',
-            common: {
-                name: 'vehicleTitle',
-                type: 'string',
-                role: 'info.name',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
+
+
     }
     //Funktionen zum sterun von evcc
     setEvccStartPV(index) {
