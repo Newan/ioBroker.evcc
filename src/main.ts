@@ -1,6 +1,7 @@
 import * as utils from '@iobroker/adapter-core';
 import axios from 'axios';
-import {  Loadpoint } from './lib/loadpoint';
+import {Loadpoint} from './lib/loadpoint';
+
 
 class Evcc extends utils.Adapter {
     private ip='';
@@ -9,6 +10,7 @@ class Evcc extends utils.Adapter {
     private maxLoadpointIndex = -1;
     private adapterIntervals: any; //halten von allen Intervallen
 
+    // @ts-ignore
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({
             ...options,
@@ -55,6 +57,7 @@ class Evcc extends utils.Adapter {
         this.getEvccData();
 
         //War alles ok, dann können wir die Daten abholen
+        // @ts-ignore
         this.adapterIntervals = this.setInterval(() => this.getEvccData(), this.polltime * 1000);
 
         this.log.debug('config ip: ' + this.config.ip);
@@ -148,10 +151,12 @@ class Evcc extends utils.Adapter {
                 //Global status Items
                 this.cre_status(response.data.result);
 
-                //Laden jeden Ladepunk einzeln
-                const tmpListLoadpoints: Loadpoint[] = response.data.result.loadpoints;
+
+                //Laden jeden Ladepunkt einzeln
+                const tmpListLoadpoints: string[] = response.data.result.loadpoints;
                 tmpListLoadpoints.forEach(async (loadpoint, index) => {
                     await this.setLoadPointdata(loadpoint, index);
+
                 });
 
                 this.setState('info.connection', true, true);
@@ -169,7 +174,7 @@ class Evcc extends utils.Adapter {
         }
     }
 
-    async setLoadPointdata(loadpoint: Loadpoint, index: number): Promise<void> {
+    async setLoadPointdata(loadpoint: any, index: number): Promise<void> {
         //Ladepunkt kann es X fach geben
         index = index + 1;// +1 why Evcc starts with 1
         this.log.debug('Ladepunkt mit index ' + 'loadpoint.' + index + ' gefunden...');
@@ -182,20 +187,21 @@ class Evcc extends utils.Adapter {
         }
 
         //Update der Werte
-        
+
         await this.setStateAsync('loadpoint.' + index + '.control.maxCurrent', { val: loadpoint.maxCurrent, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.minCurrent', { val: loadpoint.minCurrent, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.minSoc', { val: loadpoint.minSoc, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.phases', { val: loadpoint.phases, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.targetSoc', { val: loadpoint.targetSoc, ack: true });
-        
+
         this.cre_status_idx(loadpoint,index);
     }
-    async cre_status_idx(loadpoint,index) {
 
-        try {
-            for (let lpEntry in loadpoint) {
-                let lpType = typeof loaddata[lpEntry]; // get Type of Variable as String, like string/number/boolean
+    async cre_status_idx(loaddata: any, index: number):Promise<void> {
+
+       
+            for (const lpEntry in loaddata) {
+                let lpType : any = typeof loaddata[lpEntry]; // get Type of Variable as String, like string/number/boolean
 
                 let res =  loaddata[lpEntry];
 
@@ -207,6 +213,7 @@ class Evcc extends utils.Adapter {
                     res = this.milisekundenumwandeln(res);
                     lpType = 'string';
                 }
+
                 await this.extendObjectAsync(`loadpoint.${index}.status.${lpEntry}`, {
                     type: 'state',
                     common: {
@@ -218,75 +225,77 @@ class Evcc extends utils.Adapter {
                     },
                     native: {},
                 });
+
                 await this.setState(`loadpoint.${index}.status.${lpEntry}`, res, true);             
             }
-        } catch (err) {
-            this.log.warn(`Generate State problem loadpoint.${index} JSON.stringify(${err})`);
-        }
+       
     }
 
-    async cre_status(daten) {
-        try {
-            for (let lpEntry in daten) {
-                let lpType = typeof daten[lpEntry]; // get Type of Variable as String, like string/number/boolean
-                let lpData;
+    async cre_status(daten: Array<any>):Promise<void> {
+        for (const lpEntry  in daten) {
+            const lpType : any = typeof daten[lpEntry]; // get Type of Variable as String, like string/number/boolean
+            let lpData = daten[lpEntry];
 
-                if (lpEntry == 'result') {
-                    continue;
-                }
+            if (lpEntry == 'result') {
+                continue;
+            }
 
-                if (lpType == 'object') {
-                    lpData = JSON.stringify(daten[lpEntry]);
-                } else {
-                    lpData = daten[lpEntry]
-                }
+            if (lpType == 'object') {
+                lpData = JSON.stringify(daten[lpEntry]);
+            }
 
-                await this.extendObjectAsync(`status.${lpEntry}`, {
-                    type: 'state',
-                    common: {
-                        name: lpEntry,
-                        type: lpType,
-                        read: true,
-                        write: false,
-                        role: 'value',
-                    },
-                    native: {},
-                });
+            await this.extendObjectAsync(`status.${lpEntry}`, {
+                type: 'state',
+                common: {
+                    name: lpEntry,
+                    type: lpType,
+                    read: true,
+                    write: false,
+                    role: 'value',
+                },
+                native: {},
+            });
 
-                await this.setState(`status.${lpEntry}`, lpData, true);
-        } catch (err) {
-            this.log.warn(`Generate State problem loadpoint.${index} JSON.stringify(${err})`);
+
+
+            await this.setState(`status.${lpEntry}`, lpData, true);
         }
-    }
-    
-    milisekundenumwandeln(nanoseconds) {
-        let seconds = nanoseconds / 1000000000;
+}
 
-        let days = Math.floor(seconds / (24 * 3600));
-        let hours = Math.floor((seconds % (24 * 3600)) / 3600);
-        let minutes = Math.floor((seconds % 3600) / 60);
-        let remainingSeconds = Math.round(seconds % 60);
+    private milisekundenumwandeln(nanoseconds: number) {
+
+        let secondsG = nanoseconds / 1000000000;
+
+        let days = Math.floor(secondsG / (24 * 3600));
+        let hours = Math.floor((secondsG % (24 * 3600)) / 3600);
+        let minutes = Math.floor((secondsG % 3600) / 60);
+        let seconds = Math.round(secondsG % 60);
+
+        let daysR  = '';
+        let hoursR  = '';
+        let minutesR  = '';
+        let secondsR = '';
 
         if (days < 10) {
-            days = "0" + days;
+            daysR = "0" + days;
         }
 
         if (hours < 10) {
-            hours = "0" + hours;
+            hoursR = "0" + hours;
         }
 
         if (minutes < 10) {
-            minutes = "0" + minutes;
+            minutesR = "0" + minutes;
         }
 
-        if (remainingSeconds < 10) {
-            remainingSeconds = "0" + remainingSeconds;
+        if (seconds < 10) {
+            secondsR = "0" + seconds;
         }
 
         if (days > 0) {
-            return `${days}:${hours}:${minutes}:${remainingSeconds}`;
+            return `${daysR}:${hoursR}:${minutesR}:${secondsR}`;
         } else {
-            return `${hours}:${minutes}:${remainingSeconds}`;
+            return `${hoursR}:${minutesR}:${secondsR}`;
         }
     }
     
@@ -829,6 +838,7 @@ class Evcc extends utils.Adapter {
 
 if (require.main !== module) {
     // Export the constructor in compact mode
+    // @ts-ignore
     module.exports = (options: Partial<utils.AdapterOptions> | undefined) => new Evcc(options);
 } else {
     // otherwise start the instance directly

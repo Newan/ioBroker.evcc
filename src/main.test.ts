@@ -5,7 +5,7 @@
  * It is advised to test all your modules with accompanying *.test.ts-files
  */
 
-import { expect } from 'chai';
+import {expect} from 'chai';
 // import { functionToTest } from "./moduleToTest";
 
 describe('module to test => function to test', () => {
