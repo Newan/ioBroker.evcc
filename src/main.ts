@@ -264,17 +264,17 @@ class Evcc extends utils.Adapter {
 
     private milisekundenumwandeln(nanoseconds: number) {
 
-        let secondsG = nanoseconds / 1000000000;
+        let secondsG : number = nanoseconds / 1000000000;
 
-        let days = Math.floor(secondsG / (24 * 3600));
-        let hours = Math.floor((secondsG % (24 * 3600)) / 3600);
-        let minutes = Math.floor((secondsG % 3600) / 60);
-        let seconds = Math.round(secondsG % 60);
+        let days : number = Math.floor(secondsG / (24 * 3600));
+        let hours : number = Math.floor((secondsG % (24 * 3600)) / 3600);
+        let minutes : number = Math.floor((secondsG % 3600) / 60);
+        let seconds : number = Math.round(secondsG % 60);
 
-        let daysR  = '';
-        let hoursR  = '';
-        let minutesR  = '';
-        let secondsR = '';
+        let daysR : string = days.toString();
+        let hoursR : string   = hours.toString();
+        let minutesR : string   = minutes.toString();
+        let secondsR : string  = seconds.toString();
 
         if (days < 10) {
             daysR = "0" + days;
