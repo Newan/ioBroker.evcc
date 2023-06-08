@@ -257,10 +257,10 @@ class Evcc extends utils.Adapter {
         let hours = Math.floor((secondsG % (24 * 3600)) / 3600);
         let minutes = Math.floor((secondsG % 3600) / 60);
         let seconds = Math.round(secondsG % 60);
-        let daysR = '';
-        let hoursR = '';
-        let minutesR = '';
-        let secondsR = '';
+        let daysR = days.toString();
+        let hoursR = hours.toString();
+        let minutesR = minutes.toString();
+        let secondsR = seconds.toString();
         if (days < 10) {
             daysR = "0" + days;
         }
