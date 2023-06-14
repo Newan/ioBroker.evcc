@@ -1,6 +1,6 @@
 import * as utils from '@iobroker/adapter-core';
 import axios from 'axios';
-import {Loadpoint} from './lib/loadpoint';
+import { Loadpoint } from './lib/loadpoint';
 
 
 class Evcc extends utils.Adapter {
@@ -9,8 +9,6 @@ class Evcc extends utils.Adapter {
     private timeout=1000;
     private maxLoadpointIndex = -1;
     private adapterIntervals: any; //halten von allen Intervallen
-
-    // @ts-ignore
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({
             ...options,
@@ -57,7 +55,6 @@ class Evcc extends utils.Adapter {
         this.getEvccData();
 
         //War alles ok, dann können wir die Daten abholen
-        // @ts-ignore
         this.adapterIntervals = this.setInterval(() => this.getEvccData(), this.polltime * 1000);
 
         this.log.debug('config ip: ' + this.config.ip);
@@ -153,7 +150,7 @@ class Evcc extends utils.Adapter {
 
 
                 //Laden jeden Ladepunkt einzeln
-                const tmpListLoadpoints: string[] = response.data.result.loadpoints;
+                const tmpListLoadpoints: Loadpoint[] = response.data.result.loadpoints;
                 tmpListLoadpoints.forEach(async (loadpoint, index) => {
                     await this.setLoadPointdata(loadpoint, index);
 
@@ -174,7 +171,7 @@ class Evcc extends utils.Adapter {
         }
     }
 
-    async setLoadPointdata(loadpoint: any, index: number): Promise<void> {
+    async setLoadPointdata(loadpoint: Loadpoint, index: number): Promise<void> {
         //Ladepunkt kann es X fach geben
         index = index + 1;// +1 why Evcc starts with 1
         this.log.debug('Ladepunkt mit index ' + 'loadpoint.' + index + ' gefunden...');
@@ -198,37 +195,34 @@ class Evcc extends utils.Adapter {
     }
 
     async cre_status_idx(loaddata: any, index: number):Promise<void> {
+        for (const lpEntry in loaddata) {
+            let lpType : any = typeof loaddata[lpEntry]; // get Type of Variable as String, like string/number/boolean
 
-       
-            for (const lpEntry in loaddata) {
-                let lpType : any = typeof loaddata[lpEntry]; // get Type of Variable as String, like string/number/boolean
+            let res =  loaddata[lpEntry];
 
-                let res =  loaddata[lpEntry];
-
-                if (lpType == 'object') {
-                    res = JSON.stringify(res);
-                }
-
-                if (lpEntry == 'chargeDuration' || lpEntry == 'connectedDuration') {
-                    res = this.milisekundenumwandeln(res);
-                    lpType = 'string';
-                }
-
-                await this.extendObjectAsync(`loadpoint.${index}.status.${lpEntry}`, {
-                    type: 'state',
-                    common: {
-                        name: lpEntry,
-                        type: lpType,
-                        read: true,
-                        write: false,
-                        role: 'value',
-                    },
-                    native: {},
-                });
-
-                await this.setState(`loadpoint.${index}.status.${lpEntry}`, res, true);             
+            if (lpType == 'object') {
+                res = JSON.stringify(res);
             }
-       
+
+            if (lpEntry == 'chargeDuration' || lpEntry == 'connectedDuration') {
+                res = this.changeMiliSeconds(res);
+                lpType = 'string';
+            }
+
+            await this.extendObjectAsync(`loadpoint.${index}.status.${lpEntry}`, {
+                type: 'state',
+                common: {
+                    name: lpEntry,
+                    type: lpType,
+                    read: true,
+                    write: false,
+                    role: 'value',
+                },
+                native: {},
+            });
+
+            await this.setState(`loadpoint.${index}.status.${lpEntry}`, res, true);
+        }
     }
 
     async cre_status(daten: Array<any>):Promise<void> {
@@ -260,16 +254,15 @@ class Evcc extends utils.Adapter {
 
             await this.setState(`status.${lpEntry}`, lpData, true);
         }
-}
+    }
 
-    private milisekundenumwandeln(nanoseconds: number) {
+    private changeMiliSeconds(nanoseconds: number): string {
+        const secondsG : number = nanoseconds / 1000000000;
 
-        let secondsG : number = nanoseconds / 1000000000;
-
-        let days : number = Math.floor(secondsG / (24 * 3600));
-        let hours : number = Math.floor((secondsG % (24 * 3600)) / 3600);
-        let minutes : number = Math.floor((secondsG % 3600) / 60);
-        let seconds : number = Math.round(secondsG % 60);
+        const days : number = Math.floor(secondsG / (24 * 3600));
+        const hours : number = Math.floor((secondsG % (24 * 3600)) / 3600);
+        const minutes : number = Math.floor((secondsG % 3600) / 60);
+        const seconds : number = Math.round(secondsG % 60);
 
         let daysR : string = days.toString();
         let hoursR : string   = hours.toString();
@@ -277,19 +270,19 @@ class Evcc extends utils.Adapter {
         let secondsR : string  = seconds.toString();
 
         if (days < 10) {
-            daysR = "0" + days;
+            daysR = '0' + days;
         }
 
         if (hours < 10) {
-            hoursR = "0" + hours;
+            hoursR = '0' + hours;
         }
 
         if (minutes < 10) {
-            minutesR = "0" + minutes;
+            minutesR = '0' + minutes;
         }
 
         if (seconds < 10) {
-            secondsR = "0" + seconds;
+            secondsR = '0' + seconds;
         }
 
         if (days > 0) {
@@ -298,7 +291,7 @@ class Evcc extends utils.Adapter {
             return `${hoursR}:${minutesR}:${secondsR}`;
         }
     }
-    
+
     async createLoadPoint(index :number): Promise<void> {
         //Control Objects und Buttons:
         await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.off', {
@@ -838,7 +831,6 @@ class Evcc extends utils.Adapter {
 
 if (require.main !== module) {
     // Export the constructor in compact mode
-    // @ts-ignore
     module.exports = (options: Partial<utils.AdapterOptions> | undefined) => new Evcc(options);
 } else {
     // otherwise start the instance directly

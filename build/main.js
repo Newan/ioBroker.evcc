@@ -25,7 +25,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const utils = __importStar(require("@iobroker/adapter-core"));
 const axios_1 = __importDefault(require("axios"));
 class Evcc extends utils.Adapter {
-    // @ts-ignore
     constructor(options = {}) {
         super({
             ...options,
@@ -74,7 +73,6 @@ class Evcc extends utils.Adapter {
         //holen für den Start einmal alle Daten
         this.getEvccData();
         //War alles ok, dann können wir die Daten abholen
-        // @ts-ignore
         this.adapterIntervals = this.setInterval(() => this.getEvccData(), this.polltime * 1000);
         this.log.debug('config ip: ' + this.config.ip);
         this.log.debug('config polltime: ' + this.config.polltime);
@@ -210,7 +208,7 @@ class Evcc extends utils.Adapter {
                 res = JSON.stringify(res);
             }
             if (lpEntry == 'chargeDuration' || lpEntry == 'connectedDuration') {
-                res = this.milisekundenumwandeln(res);
+                res = this.changeMiliSeconds(res);
                 lpType = 'string';
             }
             await this.extendObjectAsync(`loadpoint.${index}.status.${lpEntry}`, {
@@ -251,27 +249,27 @@ class Evcc extends utils.Adapter {
             await this.setState(`status.${lpEntry}`, lpData, true);
         }
     }
-    milisekundenumwandeln(nanoseconds) {
-        let secondsG = nanoseconds / 1000000000;
-        let days = Math.floor(secondsG / (24 * 3600));
-        let hours = Math.floor((secondsG % (24 * 3600)) / 3600);
-        let minutes = Math.floor((secondsG % 3600) / 60);
-        let seconds = Math.round(secondsG % 60);
+    changeMiliSeconds(nanoseconds) {
+        const secondsG = nanoseconds / 1000000000;
+        const days = Math.floor(secondsG / (24 * 3600));
+        const hours = Math.floor((secondsG % (24 * 3600)) / 3600);
+        const minutes = Math.floor((secondsG % 3600) / 60);
+        const seconds = Math.round(secondsG % 60);
         let daysR = days.toString();
         let hoursR = hours.toString();
         let minutesR = minutes.toString();
         let secondsR = seconds.toString();
         if (days < 10) {
-            daysR = "0" + days;
+            daysR = '0' + days;
         }
         if (hours < 10) {
-            hoursR = "0" + hours;
+            hoursR = '0' + hours;
         }
         if (minutes < 10) {
-            minutesR = "0" + minutes;
+            minutesR = '0' + minutes;
         }
         if (seconds < 10) {
-            secondsR = "0" + seconds;
+            secondsR = '0' + seconds;
         }
         if (days > 0) {
             return `${daysR}:${hoursR}:${minutesR}:${secondsR}`;
@@ -772,7 +770,6 @@ class Evcc extends utils.Adapter {
 }
 if (require.main !== module) {
     // Export the constructor in compact mode
-    // @ts-ignore
     module.exports = (options) => new Evcc(options);
 }
 else {
