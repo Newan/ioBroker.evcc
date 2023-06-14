@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "evcc",
-    "version": "0.0.9",
+    "version": "0.0.10",
     "news": {
+      "0.0.10": {
+        "en": "generate dynamic objects\ntypo fixes",
+        "de": "dynamische objekte erzeugen\ntypo fixes",
+        "ru": "генерировать динамические объекты\ntypo исправления",
+        "pt": "gerar objetos dinâmicos\ncorreções de tipo",
+        "nl": "genereerde dynamische objecten\ntypo fixes",
+        "fr": "générer des objets dynamiques\ntypo corrige",
+        "it": "generare oggetti dinamici\ncorrezioni di battitura",
+        "es": "generar objetos dinámicos\ntypo fixes",
+        "pl": "generują dynamiczne obiekty\ntypo",
+        "uk": "генерувати динамічні об'єкти\nтипофіксатори",
+        "zh-cn": "产生动态目标\n类型"
+      },
       "0.0.8": {
         "en": "fix for minSoc & targetSoc",
         "de": "fix für minSoc & Ziel Soja",
