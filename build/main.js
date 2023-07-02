@@ -139,9 +139,17 @@ class Evcc extends utils.Adapter {
                         this.log.info('Set disbale threshold on loadpointindex: ' + idProperty[3]);
                         this.setEvccDisableThreshold(idProperty[3], state.val);
                         break;
-                    case 'disable_threshold':
+                    case 'enable_threshold':
                         this.log.info('Set enable threshold on loadpointindex: ' + idProperty[3]);
                         this.setEvccEnableThreshold(idProperty[3], state.val);
+                        break;
+                    case 'target_time':
+                        this.log.info('Set target_time' + idProperty[3]);
+                        this.setEvccSetTargetTime(idProperty[3], state.val);
+                        break;
+                    case 'target_time_disable':
+                        this.log.info('Set Delete taget_time ' + idProperty[3]);
+                        this.setEvccDeleteTargetTime(idProperty[3]);
                         break;
                     default:
                         this.log.debug(JSON.stringify(idProperty));
@@ -412,6 +420,30 @@ class Evcc extends utils.Adapter {
             native: {},
         });
         this.subscribeStates('loadpoint.' + index + '.control.disable_threshold');
+        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.target_time_disable', {
+            type: 'state',
+            common: {
+                name: 'target_time_disable',
+                type: 'boolean',
+                role: 'value',
+                read: false,
+                write: true,
+            },
+            native: {},
+        });
+        this.subscribeStates('loadpoint.' + index + '.control.target_time_disable');
+        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.target_time', {
+            type: 'state',
+            common: {
+                name: 'target_time',
+                type: 'string',
+                role: 'value',
+                read: false,
+                write: true,
+            },
+            native: {},
+        });
+        this.subscribeStates('loadpoint.' + index + '.control.target_time');
         //Rest in status als Objekte
         await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.activePhases', {
             type: 'state',
@@ -761,10 +793,26 @@ class Evcc extends utils.Adapter {
     }
     setEvccEnableThreshold(index, value) {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/enable/threshold/' + value);
-        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/disable/threshold/' + value, { timeout: this.timeout }).then(() => {
+        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/enable/threshold/' + value, { timeout: this.timeout }).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
             this.log.error('11 ' + error.message);
+        });
+    }
+    setEvccSetTargetTime(index, value) {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/target/time/' + value);
+        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/target/time/' + value, { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('12 ' + error.message);
+        });
+    }
+    setEvccDeleteTargetTime(index) {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/target/time');
+        axios_1.default.delete('http://' + this.ip + '/api/loadpoints/' + index + '/target/time', { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('13 ' + error.message);
         });
     }
 }
