@@ -133,7 +133,7 @@ class Evcc extends utils.Adapter {
                         break;
                     case 'target_time_disable':
                         this.log.info('Set Delete taget_time ' + idProperty[3]);
-                        this.setEvccDeleteTargetTime(idProperty[3], state.val);
+                        this.setEvccDeleteTargetTime(idProperty[3]);
                         break;
                     default:
                         this.log.debug(JSON.stringify(idProperty));
@@ -853,7 +853,7 @@ class Evcc extends utils.Adapter {
         });
     }
 
-    setEvccEnableThreshold(index:string, value: ioBroker.StateValue): void {
+    setEvccEnableThreshold(index: string, value: ioBroker.StateValue): void {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/enable/threshold/' + value);
         axios.post('http://' + this.ip + '/api/loadpoints/' + index + '/enable/threshold/' + value, {timeout: this.timeout}).then( () => {
             this.log.info('Evcc update successful');
@@ -862,18 +862,18 @@ class Evcc extends utils.Adapter {
         });
     }
 
-    setEvccSetTargetTime(index, value) {
+    setEvccSetTargetTime(index: string, value:ioBroker.StateValue): void {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/target/time/' + value);
-        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/target/time/' + value, { timeout: this.timeout }).then(() => {
+        axios.post('http://' + this.ip + '/api/loadpoints/' + index + '/target/time/' + value, { timeout: this.timeout }).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
             this.log.error('12 ' + error.message);
         });
     }
 
-    setEvccDeleteTargetTime(index, value) {
+    setEvccDeleteTargetTime(index: string): void {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/target/time');
-        axios_1.default.delete('http://' + this.ip + '/api/loadpoints/' + index + '/target/time' , { timeout: this.timeout }).then(() => {
+        axios.delete('http://' + this.ip + '/api/loadpoints/' + index + '/target/time' , { timeout: this.timeout }).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
             this.log.error('13 ' + error.message);
