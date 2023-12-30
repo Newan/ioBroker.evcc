@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "evcc",
-    "version": "0.0.11",
+    "version": "0.1.0",
     "news": {
+      "0.1.0": {
+        "en": "rewrite for evcc api changes\nadd multiple vehicle",
+        "de": "neu schreiben für evcc api änderungen\nmehrere fahrzeuge",
+        "ru": "переписать для evcc api изменений\nдобавить несколько транспортных средств",
+        "pt": "reescrever para mudanças de api evcc\nadicionar vários veículos",
+        "nl": "herschrijf voor evcc api veranderingen\nvoeg meerdere voertuigen toe",
+        "fr": "réécriture pour evcc api changes\najouter plusieurs véhicules",
+        "it": "riscrittura per evcc api modifiche\naggiungere più veicoli",
+        "es": "reescribir para cambios de evcc api\nañadir el vehículo múltiple",
+        "pl": "rewrite for evcc api changes (ang.)\ndodać multiple pojazdy",
+        "uk": "rewrite для evcc api зміни\nдодати багаторазовий автомобіль",
+        "zh-cn": "投 影\n增加多种车辆"
+      },
       "0.0.10": {
         "en": "generate dynamic objects\ntypo fixes",
         "de": "dynamische objekte erzeugen\ntypo fixes",
@@ -77,18 +90,6 @@
         "es": "(Newan) soporte evcc 0.9X - cambio a jsonConfig GUI",
         "pl": "(Newan) obsługuje evcc 0.9X - zmiana na GUI jsonConfig",
         "zh-cn": "(Newan) 支持 evcc 0.9X - 更改为 jsonConfig GUI"
-      },
-      "0.0.1": {
-        "en": "initial release",
-        "de": "Erstveröffentlichung",
-        "ru": "Начальная версия",
-        "pt": "lançamento inicial",
-        "nl": "Eerste uitgave",
-        "fr": "Première version",
-        "it": "Versione iniziale",
-        "es": "Versión inicial",
-        "pl": "Pierwsze wydanie",
-        "zh-cn": "首次出版"
       }
     },
     "titleLang": {
