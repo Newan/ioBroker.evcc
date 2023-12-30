@@ -231,13 +231,6 @@ class Evcc extends utils.Adapter {
 
         this.log.debug('Vehicle mit index ' +  vehicleID + ' gefunden...');
 
-        this.getObject('verhicle.' + vehicleID, (err, obj) => {
-            if (!obj) {
-                // Das Objekt existiert nicht
-                this.log.info(`Das Objekt ${vehicleID} braucht noch controls!`);
-            }
-        });
-
         await this.extendObjectAsync(`vehicle.${vehicleID}.title`, {
             type: 'state',
             common: {
