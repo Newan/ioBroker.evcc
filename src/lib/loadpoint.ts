@@ -28,4 +28,5 @@ export interface Loadpoint {
     vehicleTitle: string ; //A6 Tfsie 55
     enableThreshold: number;
     disableThreshold: number;
+    limitSoc: number;
 }

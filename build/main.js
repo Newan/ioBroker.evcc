@@ -135,6 +135,10 @@ class Evcc extends utils.Adapter {
                         this.log.info('Set enable threshold on loadpointindex: ' + idProperty[3]);
                         this.setEvccEnableThreshold(idProperty[3], state.val);
                         break;
+                    case 'limitSoc':
+                        this.log.info('Set limitSoc on vehicle: ' + idProperty[3]);
+                        this.setEvccLimitSoc(idProperty[3], Number(state.val));
+                        break;
                     default:
                         switch (idProperty[4]) {
                             case 'minSoc':
@@ -236,12 +240,6 @@ class Evcc extends utils.Adapter {
         //Vehicle kann es X fach geben
         const vehicleID = Object.keys(vehicle)[0];
         this.log.debug('Vehicle mit index ' + vehicleID + ' gefunden...');
-        this.getObject('verhicle.' + vehicleID, (err, obj) => {
-            if (!obj) {
-                // Das Objekt existiert nicht
-                this.log.info(`Das Objekt ${vehicleID} braucht noch controls!`);
-            }
-        });
         await this.extendObjectAsync(`vehicle.${vehicleID}.title`, {
             type: 'state',
             common: {
@@ -300,6 +298,7 @@ class Evcc extends utils.Adapter {
         await this.setStateAsync('loadpoint.' + index + '.control.disableThreshold', { val: loadpoint.disableThreshold, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.enableThreshold', { val: loadpoint.enableThreshold, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.phasesConfigured', { val: loadpoint.phasesConfigured, ack: true });
+        await this.setStateAsync('loadpoint.' + index + '.control.limitSoc', { val: loadpoint.limitSoc, ack: true });
         //Alle Werte unter Status veröffentlichen
         this.setStatusLoadPoint(loadpoint, index);
     }
@@ -467,6 +466,18 @@ class Evcc extends utils.Adapter {
             native: {},
         });
         this.subscribeStates('loadpoint.' + index + '.control.disableThreshold');
+        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.limitSoc', {
+            type: 'state',
+            common: {
+                name: 'limitSoc',
+                type: 'number',
+                role: 'value',
+                read: false,
+                write: true,
+            },
+            native: {},
+        });
+        this.subscribeStates('loadpoint.' + index + '.control.limitSoc');
     }
     //Funktionen zum sterun von evcc
     setEvccStartPV(index) {
@@ -560,6 +571,14 @@ class Evcc extends utils.Adapter {
     setEvccSetTargetTime(index, value) {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/target/time/' + value);
         axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/target/time/' + value, { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('12 ' + error.message);
+        });
+    }
+    setEvccLimitSoc(index, value) {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/limitsoc/' + value);
+        axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/limitsoc/' + value, { timeout: this.timeout }).then(() => {
             this.log.info('Evcc update successful');
         }).catch(error => {
             this.log.error('12 ' + error.message);

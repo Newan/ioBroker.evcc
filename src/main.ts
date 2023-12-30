@@ -119,6 +119,10 @@ class Evcc extends utils.Adapter {
                         this.log.info('Set enable threshold on loadpointindex: ' + idProperty[3]);
                         this.setEvccEnableThreshold(idProperty[3], state.val);
                         break;
+                    case 'limitSoc':
+                        this.log.info('Set limitSoc on vehicle: ' + idProperty[3]);
+                        this.setEvccLimitSoc(idProperty[3], Number(state.val));
+                        break;
                     default:
                         switch(idProperty[4]) {
                             case 'minSoc':
@@ -294,6 +298,7 @@ class Evcc extends utils.Adapter {
         await this.setStateAsync('loadpoint.' + index + '.control.disableThreshold', { val: loadpoint.disableThreshold, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.enableThreshold', { val: loadpoint.enableThreshold, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.phasesConfigured', { val: loadpoint.phasesConfigured , ack: true });
+        await this.setStateAsync('loadpoint.' + index + '.control.limitSoc', { val: loadpoint.limitSoc, ack: true });
 
         //Alle Werte unter Status veröffentlichen
         this.setStatusLoadPoint(loadpoint, index);
@@ -485,6 +490,20 @@ class Evcc extends utils.Adapter {
             native: {},
         });
         this.subscribeStates('loadpoint.' + index + '.control.disableThreshold');
+
+        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.limitSoc', {
+            type: 'state',
+            common: {
+                name: 'limitSoc',
+                type: 'number',
+                role: 'value',
+                read: false,
+                write: true,
+            },
+            native: {},
+        });
+        this.subscribeStates('loadpoint.' + index + '.control.limitSoc');
+
     }
 
 
@@ -597,6 +616,14 @@ class Evcc extends utils.Adapter {
         });
     }
 
+    setEvccLimitSoc(index: string, value:ioBroker.StateValue): void {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/limitsoc/' + value);
+        axios.post('http://' + this.ip + '/api/loadpoints/' + index + '/limitsoc/' + value, { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('12 ' + error.message);
+        });
+    }
     setEvccDeleteTargetTime(index: string): void {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/target/time');
         axios.delete('http://' + this.ip + '/api/loadpoints/' + index + '/target/time' , { timeout: this.timeout }).then(() => {
