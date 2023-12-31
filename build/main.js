@@ -70,6 +70,8 @@ class Evcc extends utils.Adapter {
             this.log.error('Wrong Polltime (polltime < 0), adapter stop');
             return;
         }
+        //legen - pürfen controls
+        this.createEvccControl();
         //holen für den Start einmal alle Daten
         this.getEvccData();
         //War alles ok, dann können wir die Daten abholen
@@ -154,8 +156,23 @@ class Evcc extends utils.Adapter {
                                 this.setVehicleLimitSoc(idProperty[3], Number(state.val));
                                 break;
                             default:
-                                this.log.debug(JSON.stringify(idProperty));
-                                this.log.warn(`Event with state ${id} changed: ${state.val} (ack = ${state.ack}) not found`);
+                                switch (idProperty[3]) {
+                                    case 'bufferSoc':
+                                        this.log.info('Set bufferSoc on evcc');
+                                        this.setEvccBufferSoc(Number(state.val));
+                                        break;
+                                    case 'bufferStartSoc':
+                                        this.log.info('Set bufferStartSoc on evcc');
+                                        this.setEvccBufferStartSoc(Number(state.val));
+                                        break;
+                                    case 'prioritySoc':
+                                        this.log.info('Set prioritySoc on evcc');
+                                        this.setEvccPrioritySoc(Number(state.val));
+                                        break;
+                                    default:
+                                        this.log.debug(JSON.stringify(idProperty));
+                                        this.log.warn(`Event with state ${id} changed: ${state.val} (ack = ${state.ack}) not found`);
+                                }
                         }
                 }
             }
@@ -212,7 +229,52 @@ class Evcc extends utils.Adapter {
             }
         }
     }
+    async createEvccControl() {
+        //Control Objects und Buttons:
+        await this.setObjectNotExistsAsync('control.bufferSoc', {
+            type: 'state',
+            common: {
+                name: 'bufferSoc',
+                type: 'number',
+                role: 'value',
+                read: true,
+                write: true,
+                unit: '%'
+            },
+            native: {},
+        });
+        this.subscribeStates('control.bufferSoc');
+        //http://192.168.178.10:7070/api/prioritysoc/50
+        await this.setObjectNotExistsAsync('control.prioritySoc', {
+            type: 'state',
+            common: {
+                name: 'prioritySoc',
+                type: 'number',
+                role: 'value',
+                read: true,
+                write: true,
+                unit: '%'
+            },
+            native: {},
+        });
+        this.subscribeStates('control.prioritySoc');
+        //bufferStartSoc
+        await this.setObjectNotExistsAsync('control.bufferStartSoc', {
+            type: 'state',
+            common: {
+                name: 'bufferStartSoc',
+                type: 'number',
+                role: 'value',
+                read: true,
+                write: true,
+                unit: '%'
+            },
+            native: {},
+        });
+        this.subscribeStates('control.bufferStartSoc');
+    }
     async setStatusEvcc(daten) {
+        //Dynamisch erstellen
         for (const lpEntry in daten) {
             const lpType = typeof daten[lpEntry]; // get Type of Variable as String, like string/number/boolean
             let lpData = daten[lpEntry];
@@ -220,6 +282,10 @@ class Evcc extends utils.Adapter {
             if (lpEntry == 'result' || lpEntry == 'vehicles' || lpEntry == 'loadpoints') {
                 continue;
             }
+            //Update der Control Werte
+            lpEntry == 'bufferStartSoc' && await this.setStateAsync('control.bufferStartSoc', { val: lpData, ack: true });
+            lpEntry == 'prioritySoc' && await this.setStateAsync('control.prioritySoc', { val: lpData, ack: true });
+            lpEntry == 'bufferSoc' && await this.setStateAsync('control.bufferSoc', { val: lpData, ack: true });
             if (lpType == 'object') {
                 lpData = JSON.stringify(daten[lpEntry]);
             }
@@ -645,6 +711,30 @@ class Evcc extends utils.Adapter {
             this.log.info('Evcc update successful');
         }).catch(error => {
             this.log.error('15 ' + error.message);
+        });
+    }
+    setEvccBufferSoc(bufferSoc) {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/buffersoc/' + bufferSoc);
+        axios_1.default.post('http://' + this.ip + '/api/buffersoc/' + bufferSoc, { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('setEvccBufferSoc ' + error.message);
+        });
+    }
+    setEvccBufferStartSoc(bufferStartSoc) {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/bufferstartsoc/' + bufferStartSoc);
+        axios_1.default.post('http://' + this.ip + '/api/bufferstartsoc/' + bufferStartSoc, { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('setEvccBufferStartSoc ' + error.message);
+        });
+    }
+    setEvccPrioritySoc(prioritySoc) {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/prioritysoc/' + prioritySoc);
+        axios_1.default.post('http://' + this.ip + '/api/prioritysoc/' + prioritySoc, { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('setEvccBufferStartSoc ' + error.message);
         });
     }
 }

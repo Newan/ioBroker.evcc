@@ -23,6 +23,7 @@ Forum: https://forum.iobroker.net/topic/49165/neuer-adapter-iobroker-evcc
     ### **WORK IN PROGRESS**
 -->
 ### **WORK IN PROGRESS**
+* (Newan) add batteriemangement
 * (Newan) add Soc limit to loadpoint
 * (Newan) change vehicle on loadpoint
 
