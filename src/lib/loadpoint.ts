@@ -29,4 +29,5 @@ export interface Loadpoint {
     enableThreshold: number;
     disableThreshold: number;
     limitSoc: number;
+    vehicleName: string;
 }

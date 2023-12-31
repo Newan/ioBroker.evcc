@@ -24,6 +24,7 @@ Forum: https://forum.iobroker.net/topic/49165/neuer-adapter-iobroker-evcc
 -->
 ### **WORK IN PROGRESS**
 * (Newan) add Soc limit to loadpoint
+* (Newan) change vehicle on loadpoint
 
 ### 0.1.0 (2023-12-30)
 * (Newan) rewrite for evcc api changes

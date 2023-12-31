@@ -136,8 +136,12 @@ class Evcc extends utils.Adapter {
                         this.setEvccEnableThreshold(idProperty[3], state.val);
                         break;
                     case 'limitSoc':
-                        this.log.info('Set limitSoc on vehicle: ' + idProperty[3]);
+                        this.log.info('Set limitSoc on loadpointindex: ' + idProperty[3]);
                         this.setEvccLimitSoc(idProperty[3], Number(state.val));
+                        break;
+                    case 'vehicleName':
+                        this.log.info('Set vehicleName on loadpointindex: ' + idProperty[3]);
+                        this.setEvccVehicle(idProperty[3], state.val);
                         break;
                     default:
                         switch (idProperty[4]) {
@@ -260,6 +264,7 @@ class Evcc extends utils.Adapter {
                 read: true,
                 write: true,
                 role: 'value',
+                unit: '%'
             },
             native: {},
         });
@@ -273,6 +278,7 @@ class Evcc extends utils.Adapter {
                 read: true,
                 write: true,
                 role: 'value',
+                unit: '%'
             },
             native: {},
         });
@@ -299,6 +305,7 @@ class Evcc extends utils.Adapter {
         await this.setStateAsync('loadpoint.' + index + '.control.enableThreshold', { val: loadpoint.enableThreshold, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.phasesConfigured', { val: loadpoint.phasesConfigured, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.limitSoc', { val: loadpoint.limitSoc, ack: true });
+        await this.setStateAsync('loadpoint.' + index + '.control.vehicleName', { val: loadpoint.vehicleName, ack: true });
         //Alle Werte unter Status veröffentlichen
         this.setStatusLoadPoint(loadpoint, index);
     }
@@ -448,7 +455,7 @@ class Evcc extends utils.Adapter {
                 name: 'enableThreshold',
                 type: 'number',
                 role: 'value',
-                read: false,
+                read: true,
                 write: true,
             },
             native: {},
@@ -460,7 +467,7 @@ class Evcc extends utils.Adapter {
                 name: 'disableThreshold',
                 type: 'number',
                 role: 'value',
-                read: false,
+                read: true,
                 write: true,
             },
             native: {},
@@ -472,12 +479,25 @@ class Evcc extends utils.Adapter {
                 name: 'limitSoc',
                 type: 'number',
                 role: 'value',
-                read: false,
+                read: true,
                 write: true,
+                unit: '%'
             },
             native: {},
         });
         this.subscribeStates('loadpoint.' + index + '.control.limitSoc');
+        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.vehicleName', {
+            type: 'state',
+            common: {
+                name: 'vehicleName',
+                type: 'string',
+                role: 'value',
+                read: true,
+                write: true,
+            },
+            native: {},
+        });
+        this.subscribeStates('loadpoint.' + index + '.control.vehicleName');
     }
     //Funktionen zum sterun von evcc
     setEvccStartPV(index) {
@@ -583,6 +603,25 @@ class Evcc extends utils.Adapter {
         }).catch(error => {
             this.log.error('12 ' + error.message);
         });
+    }
+    setEvccVehicle(index, value) {
+        //Wenn der String leer ist, wird es das GAstauto und wir müssen löschen
+        if (value == '') {
+            this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/vehicle');
+            axios_1.default.delete('http://' + this.ip + '/api/loadpoints/' + index + '/vehicle', { timeout: this.timeout }).then(() => {
+                this.log.info('Evcc update successful');
+            }).catch(error => {
+                this.log.error('setEvccVehicle: ' + error.message);
+            });
+        }
+        else {
+            this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/vehicle/' + value);
+            axios_1.default.post('http://' + this.ip + '/api/loadpoints/' + index + '/vehicle/' + value, { timeout: this.timeout }).then(() => {
+                this.log.info('Evcc update successful');
+            }).catch(error => {
+                this.log.error('setEvccVehicle: ' + error.message);
+            });
+        }
     }
     setEvccDeleteTargetTime(index) {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/target/time');
