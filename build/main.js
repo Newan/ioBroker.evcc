@@ -197,17 +197,18 @@ class Evcc extends utils.Adapter {
                 tmpListLoadpoints.forEach(async (loadpoint, index) => {
                     await this.setLoadPointdata(loadpoint, index);
                 });
-                let tmpListVehicles = [];
-                if (typeof (response.data.result.vehicles) == 'object') {
+                /*let tmpListVehicles: Vehicle[] = [];
+                if (typeof(response.data.result.vehicles) == 'object') {
                     // haben nur ein Fahrzeug daher etwas umbauen
                     tmpListVehicles.push(response.data.result.vehicles);
-                }
-                else {
+
+                } else {
                     tmpListVehicles = response.data.result.vehicles;
+                }*/
+                for (const vehicleKey in response.data.result.vehicles) {
+                    const vehicle = response.data.result.vehicles[vehicleKey];
+                    await this.setVehicleData(vehicleKey, vehicle);
                 }
-                tmpListVehicles.forEach(async (vehicle) => {
-                    await this.setVehicleData(vehicle);
-                });
                 //statistik einzeln ausführen
                 /*const tmpListVehicle: Vehicle[] = response.data.result.vehicles;
                 tmpListVehicle.forEach(async (vehicle, index) => {
@@ -306,11 +307,9 @@ class Evcc extends utils.Adapter {
     /**
      * Hole Daten von und für Vehicle
      */
-    async setVehicleData(vehicle) {
-        //Vehicle kann es X fach geben
-        const vehicleID = Object.keys(vehicle)[0];
-        this.log.debug('Vehicle mit index ' + vehicleID + ' gefunden...');
-        await this.extendObjectAsync(`vehicle.${vehicleID}.title`, {
+    async setVehicleData(vehicleIndex, vehicleData) {
+        this.log.debug('Vehicle mit index ' + vehicleIndex + ' gefunden...');
+        await this.extendObjectAsync(`vehicle.${vehicleIndex}.title`, {
             type: 'state',
             common: {
                 name: 'title',
@@ -321,8 +320,8 @@ class Evcc extends utils.Adapter {
             },
             native: {},
         });
-        await this.setState(`vehicle.${vehicleID}.title`, vehicle[vehicleID].title, true);
-        await this.extendObjectAsync(`vehicle.${vehicleID}.minSoc`, {
+        await this.setState(`vehicle.${vehicleIndex}.title`, vehicleData.title, true);
+        await this.extendObjectAsync(`vehicle.${vehicleIndex}.minSoc`, {
             type: 'state',
             common: {
                 name: 'minSoc',
@@ -334,9 +333,9 @@ class Evcc extends utils.Adapter {
             },
             native: {},
         });
-        this.subscribeStates(`vehicle.${vehicleID}.minSoc`);
-        await this.setStateAsync(`vehicle.${vehicleID}.minSoc`, { val: vehicle[vehicleID].minSoc !== undefined ? vehicle[vehicleID].minSoc : 0, ack: true });
-        await this.extendObjectAsync(`vehicle.${vehicleID}.limitSoc`, {
+        this.subscribeStates(`vehicle.${vehicleIndex}.minSoc`);
+        await this.setStateAsync(`vehicle.${vehicleIndex}.minSoc`, { val: vehicleData.minSoc !== undefined ? vehicleData.minSoc : 0, ack: true });
+        await this.extendObjectAsync(`vehicle.${vehicleIndex}.limitSoc`, {
             type: 'state',
             common: {
                 name: 'limitSoc',
@@ -348,8 +347,8 @@ class Evcc extends utils.Adapter {
             },
             native: {},
         });
-        this.subscribeStates(`vehicle.${vehicleID}.limitSoc`);
-        await this.setStateAsync(`vehicle.${vehicleID}.limitSoc`, { val: vehicle[vehicleID].limitSoc !== undefined ? vehicle[vehicleID].limitSoc : 100, ack: true });
+        this.subscribeStates(`vehicle.${vehicleIndex}.limitSoc`);
+        await this.setStateAsync(`vehicle.${vehicleIndex}.limitSoc`, { val: vehicleData.limitSoc !== undefined ? vehicleData.limitSoc : 100, ack: true });
     }
     /**
      * Hole Daten für Ladepunkte
