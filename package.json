@@ -1,6 +1,6 @@
 {
   "name": "iobroker.evcc",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Controll evcc over rest api",
   "author": {
     "name": "Newan",
