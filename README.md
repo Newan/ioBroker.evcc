@@ -5,7 +5,6 @@
 [![Downloads](https://img.shields.io/npm/dm/iobroker.evcc.svg)](https://www.npmjs.com/package/iobroker.evcc)
 ![Number of Installations (latest)](https://iobroker.live/badges/evcc-installed.svg)
 ![Number of Installations (stable)](https://iobroker.live/badges/evcc-stable.svg)
-[![Dependency Status](https://img.shields.io/david/Newan/iobroker.evcc.svg)](https://david-dm.org/Newan/iobroker.evcc)
 
 [![NPM](https://nodei.co/npm/iobroker.evcc.png?downloads=true)](https://nodei.co/npm/iobroker.evcc/)
 
@@ -57,7 +56,7 @@ Forum: https://forum.iobroker.net/topic/49165/neuer-adapter-iobroker-evcc
 ## License
 MIT License
 
-Copyright (c) 2023 Newan <info@newan.de>
+Copyright (c) 2024 Newan <info@newan.de>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and asSociated documentation files (the "Software"), to deal
