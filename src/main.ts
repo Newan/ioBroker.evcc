@@ -140,6 +140,16 @@ class Evcc extends utils.Adapter {
                                 this.log.info('Set limitSoc on vehicle: ' + idProperty[3]);
                                 this.setVehicleLimitSoc(idProperty[3], Number(state.val));
                                 break;
+                            case 'plan':
+                                this.log.debug('Set plan on vehicle: ' + idProperty[3]);
+                                switch(idProperty[5]) {
+                                    case 'active':
+                                        this.log.info('Set plan.active on vehicle: ' + idProperty[3]+ ' to ' + state.val);
+                                        this.setVehiclePlan(idProperty[3], Boolean(state.val), 0, 0);
+                                        break;
+                                }
+                                this.setVehicleLimitSoc(idProperty[3], Number(state.val));
+                                break;
                             default:
                                 switch(idProperty[3]) {
                                     case 'bufferSoc':
@@ -787,24 +797,6 @@ class Evcc extends utils.Adapter {
         });
     }
 
-    setVehicleMinSoc(vehicleID: string, minSoc: number): void {
-        this.log.debug('call: ' + 'http://' + this.ip + '/api/vehicles/'+ vehicleID +'/minsoc/' + minSoc);
-        axios.post('http://' + this.ip + '/api/vehicles/'+ vehicleID +'/minsoc/' + minSoc , { timeout: this.timeout }).then(() => {
-            this.log.info('Evcc update successful');
-        }).catch(error => {
-            this.log.error('14 ' + error.message);
-        });
-    }
-
-    setVehicleLimitSoc(vehicleID: string, minSoc: number): void {
-        this.log.debug('call: ' + 'http://' + this.ip + '/api/vehicles/'+ vehicleID +'/limitsoc/' + minSoc);
-        axios.post('http://' + this.ip + '/api/vehicles/'+ vehicleID +'/limitsoc/' + minSoc , { timeout: this.timeout }).then(() => {
-            this.log.info('Evcc update successful');
-        }).catch(error => {
-            this.log.error('15 ' + error.message);
-        });
-    }
-
     setEvccBufferSoc(bufferSoc: number): void {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/buffersoc/' + bufferSoc);
         axios.post('http://' + this.ip + '/api/buffersoc/' + bufferSoc , { timeout: this.timeout }).then(() => {
@@ -830,6 +822,60 @@ class Evcc extends utils.Adapter {
         }).catch(error => {
             this.log.error('setEvccBufferStartSoc ' + error.message);
         });
+    }
+    setVehicleMinSoc(vehicleID: string, minSoc: number): void {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/vehicles/'+ vehicleID +'/minsoc/' + minSoc);
+        axios.post('http://' + this.ip + '/api/vehicles/'+ vehicleID +'/minsoc/' + minSoc , { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('14 ' + error.message);
+        });
+    }
+
+    setVehicleLimitSoc(vehicleID: string, minSoc: number): void {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/vehicles/'+ vehicleID +'/limitsoc/' + minSoc);
+        axios.post('http://' + this.ip + '/api/vehicles/'+ vehicleID +'/limitsoc/' + minSoc , { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('15 ' + error.message);
+        });
+    }
+
+    setVehiclePlan (vehicleID: string, active: boolean, soc: number, time: string): void {
+        if (active) {
+
+            if (time != '' ) {
+                const currentDate = new Date();
+
+            } else {
+                const currentDate = new Date();
+                // Add one day to the current date
+                currentDate.setDate(currentDate.getDate() + 1);
+                // Convert to ISO 8601 / RFC 3339 format
+                let rfc3339Date = currentDate.toISOString();
+            }
+
+
+            //Aktvierungsregel:
+            // wenn aktive false => soc = 0% + time = 0
+            // wenn aktive true => soc = 100% + time = nextday, same time
+            // wenn soc > 0 => active = true + time = nextday, same time
+            // wenn soc < 0 => active = false
+            this.log.debug('call: ' + 'http://' + this.ip + '/api/vehicles/'+ vehicleID + '/plan/soc/100/' + rfc3339Date);
+            axios.post('http://' + this.ip + '/api/vehicles/'+ vehicleID + '/plan/soc/100/' + rfc3339Date , { timeout: this.timeout }).then(() => {
+                this.log.info('Activate plan for verhicle: ' + vehicleID);
+            }).catch(error => {
+                this.log.error('Error active plan: ' + error.message);
+            });
+        } else {
+            this.log.debug('call: ' + 'http://' + this.ip + '/api/vehicles/'+ vehicleID + '/plan/soc');
+            axios.delete('http://' + this.ip + '/api/vehicles/'+ vehicleID + '/plan/soc' , { timeout: this.timeout }).then(() => {
+                this.log.info('Deactivate plan for verhicle: ' + vehicleID);
+            }).catch(error => {
+                this.log.error('Error deactive plan: ' + error.message);
+            });
+        }
+
     }
 }
 
