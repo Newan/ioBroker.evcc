@@ -2,7 +2,7 @@ export interface Vehicle {
     title: string;
     minSoc: number;
     limitSoc: number;
-    //plans: Plan[];
+    plans: Plan[];
 }
 
 export interface Plan {

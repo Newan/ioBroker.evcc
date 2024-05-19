@@ -349,6 +349,47 @@ class Evcc extends utils.Adapter {
         });
         this.subscribeStates(`vehicle.${vehicleIndex}.limitSoc`);
         await this.setStateAsync(`vehicle.${vehicleIndex}.limitSoc`, { val: vehicleData.limitSoc !== undefined ? vehicleData.limitSoc : 100, ack: true });
+        //Ladeplanung hinzufürgen
+        await this.extendObjectAsync(`vehicle.${vehicleIndex}.plan.active`, {
+            type: 'state',
+            common: {
+                name: 'active',
+                type: 'boolean',
+                read: true,
+                write: true,
+                role: 'value'
+            },
+            native: {},
+        });
+        this.subscribeStates(`vehicle.${vehicleIndex}.plan.active`);
+        await this.setStateAsync(`vehicle.${vehicleIndex}.plan.active`, { val: vehicleData.plans !== undefined ? true : false, ack: true });
+        await this.extendObjectAsync(`vehicle.${vehicleIndex}.plan.planSoc`, {
+            type: 'state',
+            common: {
+                name: 'planSoc',
+                type: 'number',
+                read: true,
+                write: true,
+                role: 'value',
+                unit: '%'
+            },
+            native: {},
+        });
+        this.subscribeStates(`vehicle.${vehicleIndex}.plan.planSoc`);
+        await this.setStateAsync(`vehicle.${vehicleIndex}.plan.planSoc`, { val: vehicleData.plans !== undefined ? vehicleData.plans[0].soc : 0, ack: true });
+        await this.extendObjectAsync(`vehicle.${vehicleIndex}.plan.time`, {
+            type: 'state',
+            common: {
+                name: 'time',
+                type: 'number',
+                read: true,
+                write: true,
+                role: 'date'
+            },
+            native: {},
+        });
+        this.subscribeStates(`vehicle.${vehicleIndex}.plan.time`);
+        await this.setStateAsync(`vehicle.${vehicleIndex}.plan.time`, { val: vehicleData.plans !== undefined ? vehicleData.plans[0].time : 0, ack: true });
     }
     /**
      * Hole Daten für Ladepunkte
