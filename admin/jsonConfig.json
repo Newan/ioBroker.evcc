@@ -16,6 +16,14 @@
           "md": 6,
           "lg": 6
         },
+        "dissolveObjects":  {
+           "type": "checkbox",
+           "label": "Dissolve objects",
+           "attr": "disabled",
+           "width": "30px",
+           "title": "Dissolve objects",
+           "default": false
+         },
         "ip": {
           "newLine": true,
           "type": "text",

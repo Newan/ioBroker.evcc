@@ -1,7 +1,7 @@
 import * as utils from '@iobroker/adapter-core';
 import axios from 'axios';
-import {Loadpoint} from './lib/loadpoint';
-
+import { Loadpoint } from './lib/loadpoint';
+import { Vehicle } from './lib/vehicle';
 
 class Evcc extends utils.Adapter {
     private ip='';
@@ -9,8 +9,6 @@ class Evcc extends utils.Adapter {
     private timeout=1000;
     private maxLoadpointIndex = -1;
     private adapterIntervals: any; //halten von allen Intervallen
-
-    // @ts-ignore
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({
             ...options,
@@ -53,11 +51,13 @@ class Evcc extends utils.Adapter {
             return;
         }
 
+        //legen - pürfen controls
+        this.createEvccControl();
+
         //holen für den Start einmal alle Daten
         this.getEvccData();
 
         //War alles ok, dann können wir die Daten abholen
-        // @ts-ignore
         this.adapterIntervals = this.setInterval(() => this.getEvccData(), this.polltime * 1000);
 
         this.log.debug('config ip: ' + this.config.ip);
@@ -95,20 +95,12 @@ class Evcc extends utils.Adapter {
                         this.setEvccStartNow(idProperty[3]);
                         break;
                     case 'min':
-                        this.log.info('Start evcc ninimal charging on loadpointindex: ' + idProperty[3]);
+                        this.log.info('Start evcc minimal charging on loadpointindex: ' + idProperty[3]);
                         this.setEvccStartMin(idProperty[3]);
                         break;
                     case 'pv':
                         this.log.info('Start evcc pv only charging on loadpointindex: ' + idProperty[3]);
                         this.setEvccStartPV(idProperty[3]);
-                        break;
-                    case 'minSoc':
-                        this.log.info('Set minSoc on loadpointindex: ' + idProperty[3]);
-                        this.setEvccMinSoc(idProperty[3], state.val);
-                        break;
-                    case 'targetSoc':
-                        this.log.info('Set evcc targetSoc on loadpointindex: ' + idProperty[3]);
-                        this.setEvccTargetSoc(idProperty[3], state.val);
                         break;
                     case 'minCurrent':
                         this.log.info('Set minCurrent on loadpointindex: ' + idProperty[3]);
@@ -118,22 +110,65 @@ class Evcc extends utils.Adapter {
                         this.log.info('Set maxCurrent on loadpointindex: ' + idProperty[3]);
                         this.setEvccMaxCurrent(idProperty[3], state.val);
                         break;
-                    case 'phases':
-                        this.log.info('Set phases on loadpointindex: ' + idProperty[3]);
+                    case 'phasesConfigured':
+                        this.log.info('Set phasesConfigured on loadpointindex: ' + idProperty[3]);
                         this.setEvccPhases(idProperty[3], state.val);
                         break;
                     case 'disable_threshold':
                         this.log.info('Set disbale threshold on loadpointindex: ' + idProperty[3]);
                         this.setEvccDisableThreshold(idProperty[3], state.val);
                         break;
-                    case 'disable_threshold':
+                    case 'enable_threshold':
                         this.log.info('Set enable threshold on loadpointindex: ' + idProperty[3]);
                         this.setEvccEnableThreshold(idProperty[3], state.val);
                         break;
+                    case 'limitSoc':
+                        this.log.info('Set limitSoc on loadpointindex: ' + idProperty[3]);
+                        this.setEvccLimitSoc(idProperty[3], Number(state.val));
+                        break;
+                    case 'vehicleName':
+                        this.log.info('Set vehicleName on loadpointindex: ' + idProperty[3]);
+                        this.setEvccVehicle(idProperty[3], state.val);
+                        break;
                     default:
-                        this.log.debug(JSON.stringify(idProperty));
-                        this.log.warn(`Event with state ${id} changed: ${state.val} (ack = ${state.ack}) not found`);
-
+                        switch(idProperty[4]) {
+                            case 'minSoc':
+                                this.log.info('Set minSoc on vehicle: ' + idProperty[3]);
+                                this.setVehicleMinSoc(idProperty[3], Number(state.val));
+                                break;
+                            case 'limitSoc':
+                                this.log.info('Set limitSoc on vehicle: ' + idProperty[3]);
+                                this.setVehicleLimitSoc(idProperty[3], Number(state.val));
+                                break;
+                            case 'plan':
+                                this.log.debug('Set plan on vehicle: ' + idProperty[3]);
+                                switch(idProperty[5]) {
+                                    case 'active':
+                                        this.log.info('Set plan.active on vehicle: ' + idProperty[3]+ ' to ' + state.val);
+                                        this.setVehiclePlan(idProperty[3], Boolean(state.val), 0, 0);
+                                        break;
+                                }
+                                this.setVehicleLimitSoc(idProperty[3], Number(state.val));
+                                break;
+                            default:
+                                switch(idProperty[3]) {
+                                    case 'bufferSoc':
+                                        this.log.info('Set bufferSoc on evcc');
+                                        this.setEvccBufferSoc(Number(state.val));
+                                        break;
+                                    case 'bufferStartSoc':
+                                        this.log.info('Set bufferStartSoc on evcc');
+                                        this.setEvccBufferStartSoc(Number(state.val));
+                                        break;
+                                    case 'prioritySoc':
+                                        this.log.info('Set prioritySoc on evcc');
+                                        this.setEvccPrioritySoc(Number(state.val));
+                                        break;
+                                    default:
+                                        this.log.debug(JSON.stringify(idProperty));
+                                        this.log.warn(`Event with state ${id} changed: ${state.val} (ack = ${state.ack}) not found`);
+                                }
+                        }
                 }
             }
         } else {
@@ -142,22 +177,44 @@ class Evcc extends utils.Adapter {
         }
     }
 
+    /**
+     * Hole Daten vom EVCC
+     */
     private getEvccData() : void {
         try {
             this.log.debug('call: ' + 'http://' + this.ip + '/api/state');
             axios('http://' + this.ip + '/api/state', {timeout: this.timeout}).then( async response => {
                 this.log.debug('Get-Data from evcc:' + JSON.stringify(response.data));
 
-                //Global status Items
-                this.cre_status(response.data.result);
-
+                //Global status Items - ohne loadpoints - ohne vehicle
+                this.setStatusEvcc(response.data.result);
 
                 //Laden jeden Ladepunkt einzeln
-                const tmpListLoadpoints: string[] = response.data.result.loadpoints;
+                const tmpListLoadpoints: Loadpoint[] = response.data.result.loadpoints;
                 tmpListLoadpoints.forEach(async (loadpoint, index) => {
                     await this.setLoadPointdata(loadpoint, index);
-
                 });
+
+                /*let tmpListVehicles: Vehicle[] = [];
+                if (typeof(response.data.result.vehicles) == 'object') {
+                    // haben nur ein Fahrzeug daher etwas umbauen
+                    tmpListVehicles.push(response.data.result.vehicles);
+
+                } else {
+                    tmpListVehicles = response.data.result.vehicles;
+                }*/
+
+
+                for (const vehicleKey in response.data.result.vehicles) {
+                    const vehicle = response.data.result.vehicles[vehicleKey];
+                    await this.setVehicleData(vehicleKey, vehicle);
+                }
+
+                //statistik einzeln ausführen
+                /*const tmpListVehicle: Vehicle[] = response.data.result.vehicles;
+                tmpListVehicle.forEach(async (vehicle, index) => {
+                    await this.setVehicleData(vehicle, index);
+                });*/
 
                 this.setState('info.connection', true, true);
             }).catch(error => {
@@ -173,8 +230,218 @@ class Evcc extends utils.Adapter {
             }
         }
     }
+    async createEvccControl(): Promise<void> {
+        //Control Objects und Buttons:
+        await this.setObjectNotExistsAsync('control.bufferSoc', {
+            type: 'state',
+            common: {
+                name: 'bufferSoc',
+                type: 'number',
+                role: 'value',
+                read: true,
+                write: true,
+                unit: '%'
+            },
+            native: {},
+        });
+        this.subscribeStates('control.bufferSoc');
 
-    async setLoadPointdata(loadpoint: any, index: number): Promise<void> {
+        //http://192.168.178.10:7070/api/prioritysoc/50
+        await this.setObjectNotExistsAsync('control.prioritySoc', {
+            type: 'state',
+            common: {
+                name: 'prioritySoc',
+                type: 'number',
+                role: 'value',
+                read: true,
+                write: true,
+                unit: '%'
+            },
+            native: {},
+        });
+        this.subscribeStates('control.prioritySoc');
+
+        //bufferStartSoc
+        await this.setObjectNotExistsAsync('control.bufferStartSoc', {
+            type: 'state',
+            common: {
+                name: 'bufferStartSoc',
+                type: 'number',
+                role: 'value',
+                read: true,
+                write: true,
+                unit: '%'
+            },
+            native: {},
+        });
+        this.subscribeStates('control.bufferStartSoc');
+    }
+
+    async setStatusEvcc(daten: Array<any>, knoten: string):Promise<void> {
+        //Dynamisch erstellen
+        for (const lpEntry  in daten) {
+            
+            if (!daten.hasOwnProperty(lpEntry)) continue;
+            
+            let lpData = daten[lpEntry];
+            if (JSON.stringify(lpData) === '{}' || JSON.stringify(lpData) === '[]') continue;
+            
+            const lpType : any = typeof lpData; // get Type of Variable as String, like string/number/boolean            
+
+            //TODO noch PV uns statístic ausführen
+            if (lpEntry == 'result' || lpEntry == 'vehicles' || lpEntry == 'loadpoints') {
+                continue;
+            }
+
+            //Update der Control Werte
+            if (lpEntry === 'bufferStartSoc') {
+                await this.setStateAsync('control.bufferStartSoc', {val: lpData, ack: true});
+            } else if (lpEntry === 'prioritySoc') {
+                await this.setStateAsync('control.prioritySoc', {val: lpData, ack: true});
+            } else if (lpEntry === 'bufferSoc') {
+                await this.setStateAsync('control.bufferSoc', {val: lpData, ack: true});
+            }
+
+            let outData : any = lpData;
+
+            if (lpType === 'object' && lpData !== null) {
+                await this.setStatusEvcc(lpData,lpEntry);
+                outData = JSON.stringify(lpData);
+            }
+
+            if (knoten !== undefined) {
+                const lpEntryFormatted = lpEntry.replace(/^./, char => char.toUpperCase());
+                this.setObjectNotExists(`status.${knoten}${lpEntryFormatted}`, {
+                    type: 'state',
+                    common: {
+                        name: `${lpEntry}`,
+                        type: `${lpType}`,
+                        read: true,
+                        write: false,
+                        role: 'value',
+                    },
+                    native: {},
+                });
+
+                this.setState(`status.${knoten}${lpEntryFormatted}`, outData, true);
+            } else {
+
+                this.setObjectNotExists(`status.${lpEntry}`, {
+                    type: 'state',
+                    common: {
+                        name: `${lpEntry}`,
+                        type: `${lpType}`,
+                        read: true,
+                        write: false,
+                        role: 'value',
+                    },
+                    native: {},
+                });
+
+                this.setState(`status.${lpEntry}`, outData, true);
+            }
+        }
+    }
+    /**
+     * Hole Daten von und für Vehicle
+     */
+    async setVehicleData(vehicleIndex: string, vehicleData: Vehicle): Promise<void> {
+
+        this.log.debug('Vehicle mit index ' +  vehicleIndex + ' gefunden...');
+
+        await this.extendObjectAsync(`vehicle.${vehicleIndex}.title`, {
+            type: 'state',
+            common: {
+                name: 'title',
+                type: 'string',
+                read: true,
+                write: false,
+                role: 'value',
+            },
+            native: {},
+        });
+        await this.setState(`vehicle.${vehicleIndex}.title`, vehicleData.title, true);
+
+        await this.extendObjectAsync(`vehicle.${vehicleIndex}.minSoc`, {
+            type: 'state',
+            common: {
+                name: 'minSoc',
+                type: 'number',
+                read: true,
+                write: true,
+                role: 'value',
+                unit: '%'
+            },
+            native: {},
+        });
+        this.subscribeStates(`vehicle.${vehicleIndex}.minSoc`);
+        await this.setStateAsync(`vehicle.${vehicleIndex}.minSoc`, { val: vehicleData.minSoc !== undefined ? vehicleData.minSoc : 0, ack: true });
+
+        await this.extendObjectAsync(`vehicle.${vehicleIndex}.limitSoc`, {
+            type: 'state',
+            common: {
+                name: 'limitSoc',
+                type: 'number',
+                read: true,
+                write: true,
+                role: 'value',
+                unit: '%'
+            },
+            native: {},
+        });
+        this.subscribeStates(`vehicle.${vehicleIndex}.limitSoc`);
+        await this.setStateAsync(`vehicle.${vehicleIndex}.limitSoc`,{ val:  vehicleData.limitSoc !== undefined ? vehicleData.limitSoc : 100, ack: true });
+
+        //Ladeplanung hinzufürgen
+        await this.extendObjectAsync(`vehicle.${vehicleIndex}.plan.active`, {
+            type: 'state',
+            common: {
+                name: 'active',
+                type: 'boolean',
+                read: true,
+                write: true,
+                role: 'value'
+            },
+            native: {},
+        });
+        this.subscribeStates(`vehicle.${vehicleIndex}.plan.active`);
+        await this.setStateAsync(`vehicle.${vehicleIndex}.plan.active`,{ val:  vehicleData.plans !== undefined ? true : false, ack: true });
+
+        await this.extendObjectAsync(`vehicle.${vehicleIndex}.plan.planSoc`, {
+            type: 'state',
+            common: {
+                name: 'planSoc',
+                type: 'number',
+                read: true,
+                write: true,
+                role: 'value',
+                unit: '%'
+            },
+            native: {},
+        });
+        this.subscribeStates(`vehicle.${vehicleIndex}.plan.planSoc`);
+        await this.setStateAsync(`vehicle.${vehicleIndex}.plan.planSoc`,{ val:  vehicleData.plans !== undefined ? vehicleData.plans[0].soc : 0, ack: true });
+
+        await this.extendObjectAsync(`vehicle.${vehicleIndex}.plan.time`, {
+            type: 'state',
+            common: {
+                name: 'time',
+                type: 'number',
+                read: true,
+                write: true,
+                role: 'date'
+            },
+            native: {},
+        });
+        this.subscribeStates(`vehicle.${vehicleIndex}.plan.time`);
+        await this.setStateAsync(`vehicle.${vehicleIndex}.plan.time`,{ val:  vehicleData.plans !== undefined ? vehicleData.plans[0].time : 0, ack: true });
+
+    }
+
+    /**
+     * Hole Daten für Ladepunkte
+     */
+    async setLoadPointdata(loadpoint: Loadpoint, index: number): Promise<void> {
         //Ladepunkt kann es X fach geben
         index = index + 1;// +1 why Evcc starts with 1
         this.log.debug('Ladepunkt mit index ' + 'loadpoint.' + index + ' gefunden...');
@@ -187,64 +454,34 @@ class Evcc extends utils.Adapter {
         }
 
         //Update der Werte
-
         await this.setStateAsync('loadpoint.' + index + '.control.maxCurrent', { val: loadpoint.maxCurrent, ack: true });
         await this.setStateAsync('loadpoint.' + index + '.control.minCurrent', { val: loadpoint.minCurrent, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.control.minSoc', { val: loadpoint.minSoc, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.control.phases', { val: loadpoint.phases, ack: true });
-        await this.setStateAsync('loadpoint.' + index + '.control.targetSoc', { val: loadpoint.targetSoc, ack: true });
+        await this.setStateAsync('loadpoint.' + index + '.control.disableThreshold', { val: loadpoint.disableThreshold, ack: true });
+        await this.setStateAsync('loadpoint.' + index + '.control.enableThreshold', { val: loadpoint.enableThreshold, ack: true });
+        await this.setStateAsync('loadpoint.' + index + '.control.phasesConfigured', { val: loadpoint.phasesConfigured , ack: true });
+        await this.setStateAsync('loadpoint.' + index + '.control.limitSoc', { val: loadpoint.limitSoc, ack: true });
+        await this.setStateAsync('loadpoint.' + index + '.control.vehicleName', { val: loadpoint.vehicleName, ack: true });
 
-        this.cre_status_idx(loadpoint,index);
+        //Alle Werte unter Status veröffentlichen
+        this.setStatusLoadPoint(loadpoint, index);
     }
 
-    async cre_status_idx(loaddata: any, index: number):Promise<void> {
+    async setStatusLoadPoint(loaddata: any, index: number):Promise<void> {
+        for (const lpEntry in loaddata) {
+            let lpType : any = typeof loaddata[lpEntry]; // get Type of Variable as String, like string/number/boolean
 
-       
-            for (const lpEntry in loaddata) {
-                let lpType : any = typeof loaddata[lpEntry]; // get Type of Variable as String, like string/number/boolean
-
-                let res =  loaddata[lpEntry];
-
-                if (lpType == 'object') {
-                    res = JSON.stringify(res);
-                }
-
-                if (lpEntry == 'chargeDuration' || lpEntry == 'connectedDuration') {
-                    res = this.milisekundenumwandeln(res);
-                    lpType = 'string';
-                }
-
-                await this.extendObjectAsync(`loadpoint.${index}.status.${lpEntry}`, {
-                    type: 'state',
-                    common: {
-                        name: lpEntry,
-                        type: lpType,
-                        read: true,
-                        write: false,
-                        role: 'value',
-                    },
-                    native: {},
-                });
-
-                await this.setState(`loadpoint.${index}.status.${lpEntry}`, res, true);             
-            }
-       
-    }
-
-    async cre_status(daten: Array<any>):Promise<void> {
-        for (const lpEntry  in daten) {
-            const lpType : any = typeof daten[lpEntry]; // get Type of Variable as String, like string/number/boolean
-            let lpData = daten[lpEntry];
-
-            if (lpEntry == 'result') {
-                continue;
-            }
+            let res =  loaddata[lpEntry];
 
             if (lpType == 'object') {
-                lpData = JSON.stringify(daten[lpEntry]);
+                res = JSON.stringify(res);
             }
 
-            await this.extendObjectAsync(`status.${lpEntry}`, {
+            if (lpEntry == 'chargeDuration' || lpEntry == 'connectedDuration') {
+                res = this.changeMiliSeconds(res);
+                lpType = 'string';
+            }
+
+            await this.extendObjectAsync(`loadpoint.${index}.status.${lpEntry}`, {
                 type: 'state',
                 common: {
                     name: lpEntry,
@@ -256,20 +493,18 @@ class Evcc extends utils.Adapter {
                 native: {},
             });
 
-
-
-            await this.setState(`status.${lpEntry}`, lpData, true);
+            await this.setState(`loadpoint.${index}.status.${lpEntry}`, res, true);
         }
-}
+    }
 
-    private milisekundenumwandeln(nanoseconds: number) {
 
-        let secondsG : number = nanoseconds / 1000000000;
+    private changeMiliSeconds(nanoseconds: number): string {
+        const secondsG : number = nanoseconds / 1000000000;
 
-        let days : number = Math.floor(secondsG / (24 * 3600));
-        let hours : number = Math.floor((secondsG % (24 * 3600)) / 3600);
-        let minutes : number = Math.floor((secondsG % 3600) / 60);
-        let seconds : number = Math.round(secondsG % 60);
+        const days : number = Math.floor(secondsG / (24 * 3600));
+        const hours : number = Math.floor((secondsG % (24 * 3600)) / 3600);
+        const minutes : number = Math.floor((secondsG % 3600) / 60);
+        const seconds : number = Math.round(secondsG % 60);
 
         let daysR : string = days.toString();
         let hoursR : string   = hours.toString();
@@ -277,19 +512,19 @@ class Evcc extends utils.Adapter {
         let secondsR : string  = seconds.toString();
 
         if (days < 10) {
-            daysR = "0" + days;
+            daysR = '0' + days;
         }
 
         if (hours < 10) {
-            hoursR = "0" + hours;
+            hoursR = '0' + hours;
         }
 
         if (minutes < 10) {
-            minutesR = "0" + minutes;
+            minutesR = '0' + minutes;
         }
 
         if (seconds < 10) {
-            secondsR = "0" + seconds;
+            secondsR = '0' + seconds;
         }
 
         if (days > 0) {
@@ -298,7 +533,7 @@ class Evcc extends utils.Adapter {
             return `${hoursR}:${minutesR}:${secondsR}`;
         }
     }
-    
+
     async createLoadPoint(index :number): Promise<void> {
         //Control Objects und Buttons:
         await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.off', {
@@ -307,7 +542,7 @@ class Evcc extends utils.Adapter {
                 name: 'Stop charging',
                 type: 'boolean',
                 role: 'button',
-                read: true,
+                read: false,
                 write: true,
             },
             native: {},
@@ -320,7 +555,7 @@ class Evcc extends utils.Adapter {
                 name: 'Start now charging',
                 type: 'boolean',
                 role: 'button',
-                read: true,
+                read: false,
                 write: true,
             },
             native: {},
@@ -333,7 +568,7 @@ class Evcc extends utils.Adapter {
                 name: 'Start min pv charging',
                 type: 'boolean',
                 role: 'button',
-                read: true,
+                read: false,
                 write: true,
             },
             native: {},
@@ -346,39 +581,12 @@ class Evcc extends utils.Adapter {
                 name: 'Start pv only charging',
                 type: 'boolean',
                 role: 'button',
-                read: true,
+                read: false,
                 write: true,
             },
             native: {},
         });
         this.subscribeStates('loadpoint.' + index + '.control.pv');
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.minSoc', {
-            type: 'state',
-            common: {
-                name: 'minSoc',
-                type: 'number',
-                role: 'value.min',
-                read: true,
-                write: true,
-            },
-            native: {},
-        });
-        this.subscribeStates('loadpoint.' + index + '.control.minSoc');
-
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.targetSoc', {
-            type: 'state',
-            common: {
-                name: 'targetSoc',
-                type: 'number',
-                role: 'value',
-                read: true,
-                write: true,
-            },
-            native: {},
-        });
-        this.subscribeStates('loadpoint.' + index + '.control.targetSoc');
 
         await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.maxCurrent', {
             type: 'state',
@@ -406,10 +614,10 @@ class Evcc extends utils.Adapter {
         });
         this.subscribeStates('loadpoint.' + index + '.control.minCurrent');
 
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.phases', {
+        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.phasesConfigured', {
             type: 'state',
             common: {
-                name: 'phases',
+                name: '(0=auto/1=1p/3=3p)',
                 type: 'number',
                 role: 'value',
                 read: true,
@@ -417,323 +625,62 @@ class Evcc extends utils.Adapter {
             },
             native: {},
         });
-        this.subscribeStates('loadpoint.' + index + '.control.phases');
+        this.subscribeStates('loadpoint.' + index + '.control.phasesConfigured');
 
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.enable_threshold', {
+        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.enableThreshold', {
             type: 'state',
             common: {
-                name: 'enable_threshold',
+                name: 'enableThreshold',
                 type: 'number',
                 role: 'value',
-                read: false,
+                read: true,
                 write: true,
             },
             native: {},
         });
-        this.subscribeStates('loadpoint.' + index + '.control.enable_threshold');
+        this.subscribeStates('loadpoint.' + index + '.control.enableThreshold');
 
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.disable_threshold', {
+        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.disableThreshold', {
             type: 'state',
             common: {
-                name: 'disable_threshold',
+                name: 'disableThreshold',
                 type: 'number',
                 role: 'value',
-                read: false,
+                read: true,
                 write: true,
             },
             native: {},
         });
-        this.subscribeStates('loadpoint.' + index + '.control.disable_threshold');
+        this.subscribeStates('loadpoint.' + index + '.control.disableThreshold');
 
-        //Rest in status als Objekte
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.activePhases', {
+        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.limitSoc', {
             type: 'state',
             common: {
-                name: 'activePhases',
+                name: 'limitSoc',
                 type: 'number',
                 role: 'value',
                 read: true,
-                write: false,
+                write: true,
+                unit: '%'
             },
             native: {},
         });
+        this.subscribeStates('loadpoint.' + index + '.control.limitSoc');
 
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.chargeConfigured', {
+        await this.setObjectNotExistsAsync('loadpoint.' + index + '.control.vehicleName', {
             type: 'state',
             common: {
-                name: 'chargeConfigured',
-                type: 'boolean',
-                role: 'value.current',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.chargeCurrent', {
-            type: 'state',
-            common: {
-                name: 'chargeCurrent',
-                type: 'number',
-                role: 'value.current',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.chargeCurrents', {
-            type: 'state',
-            common: {
-                name: 'chargeCurrents',
+                name: 'vehicleName',
                 type: 'string',
-                role: 'value.current',
+                role: 'value',
                 read: true,
-                write: false,
+                write: true,
             },
             native: {},
         });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.chargeDuration', {
-            type: 'state',
-            common: {
-                name: 'chargeDuration',
-                type: 'number',
-                role: 'value.current',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.chargePower', {
-            type: 'state',
-            common: {
-                name: 'chargePower',
-                type: 'number',
-                role: 'value.current',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.chargeRemainingDuration', {
-            type: 'state',
-            common: {
-                name: 'chargeRemainingDuration',
-                type: 'number',
-                role: 'value.current',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.chargedEnergy', {
-            type: 'state',
-            common: {
-                name: 'chargedEnergy',
-                type: 'number',
-                role: 'value.current',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.charging', {
-            type: 'state',
-            common: {
-                name: 'charging',
-                type: 'boolean',
-                role: 'value.current',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.connected', {
-            type: 'state',
-            common: {
-                name: 'connected',
-                type: 'boolean',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.connectedDuration', {
-            type: 'state',
-            common: {
-                name: 'connectedDuration',
-                type: 'number',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.enabled', {
-            type: 'state',
-            common: {
-                name: 'enabled',
-                type: 'boolean',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.hasVehicle', {
-            type: 'state',
-            common: {
-                name: 'hasVehicle',
-                type: 'boolean',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.mode', {
-            type: 'state',
-            common: {
-                name: 'mode',
-                type: 'string',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.timerActive', {
-            type: 'state',
-            common: {
-                name: 'timerActive',
-                type: 'boolean',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.timerProjectedEnd', {
-            type: 'state',
-            common: {
-                name: 'timerProjectedEnd',
-                type: 'string',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.timerSet', {
-            type: 'state',
-            common: {
-                name: 'timerSet',
-                type: 'boolean',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.title', {
-            type: 'state',
-            common: {
-                name: 'title',
-                type: 'string',
-                role: 'info.name',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.vehicleCapacity', {
-            type: 'state',
-            common: {
-                name: 'vehicleCapacity',
-                type: 'number',
-                role: 'info.name',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.vehicleIdentity', {
-            type: 'state',
-            common: {
-                name: 'vehicleIdentity',
-                type: 'string',
-                role: 'info.name',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.vehiclePresent', {
-            type: 'state',
-            common: {
-                name: 'vehiclePresent',
-                type: 'boolean',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.vehicleRange', {
-            type: 'state',
-            common: {
-                name: 'vehicleRange',
-                type: 'number',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.vehicleSoc', {
-            type: 'state',
-            common: {
-                name: 'vehicleSoc',
-                type: 'number',
-                role: 'info.status',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
-
-        await this.setObjectNotExistsAsync('loadpoint.' + index + '.status.vehicleTitle', {
-            type: 'state',
-            common: {
-                name: 'vehicleTitle',
-                type: 'string',
-                role: 'info.name',
-                read: true,
-                write: false,
-            },
-            native: {},
-        });
+        this.subscribeStates('loadpoint.' + index + '.control.vehicleName');
     }
+
 
     //Funktionen zum sterun von evcc
     setEvccStartPV(index:string): void {
@@ -826,19 +773,144 @@ class Evcc extends utils.Adapter {
         });
     }
 
-    setEvccEnableThreshold(index:string, value: ioBroker.StateValue): void {
+    setEvccEnableThreshold(index: string, value: ioBroker.StateValue): void {
         this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/enable/threshold/' + value);
-        axios.post('http://' + this.ip + '/api/loadpoints/' + index + '/disable/threshold/' + value, {timeout: this.timeout}).then( () => {
+        axios.post('http://' + this.ip + '/api/loadpoints/' + index + '/enable/threshold/' + value, {timeout: this.timeout}).then( () => {
             this.log.info('Evcc update successful');
         }).catch(error => {
             this.log.error('11 ' + error.message)
         });
     }
+
+    setEvccSetTargetTime(index: string, value:ioBroker.StateValue): void {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/target/time/' + value);
+        axios.post('http://' + this.ip + '/api/loadpoints/' + index + '/target/time/' + value, { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('12 ' + error.message);
+        });
+    }
+
+    setEvccLimitSoc(index: string, value:ioBroker.StateValue): void {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/limitsoc/' + value);
+        axios.post('http://' + this.ip + '/api/loadpoints/' + index + '/limitsoc/' + value, { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('12 ' + error.message);
+        });
+    }
+    setEvccVehicle(index: string, value:ioBroker.StateValue): void {
+        //Wenn der String leer ist, wird es das GAstauto und wir müssen löschen
+        if(value == '') {
+            this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/vehicle');
+            axios.delete('http://' + this.ip + '/api/loadpoints/' + index + '/vehicle' , { timeout: this.timeout }).then(() => {
+                this.log.info('Evcc update successful');
+            }).catch(error => {
+                this.log.error('setEvccVehicle: ' + error.message);
+            });
+        } else {
+            this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/vehicle/' + value);
+            axios.post('http://' + this.ip + '/api/loadpoints/' + index + '/vehicle/' + value, { timeout: this.timeout }).then(() => {
+                this.log.info('Evcc update successful');
+            }).catch(error => {
+                this.log.error('setEvccVehicle: ' + error.message);
+            });
+        }
+    }
+
+    setEvccDeleteTargetTime(index: string): void {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/loadpoints/' + index + '/target/time');
+        axios.delete('http://' + this.ip + '/api/loadpoints/' + index + '/target/time' , { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('13 ' + error.message);
+        });
+    }
+
+    setEvccBufferSoc(bufferSoc: number): void {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/buffersoc/' + bufferSoc);
+        axios.post('http://' + this.ip + '/api/buffersoc/' + bufferSoc , { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('setEvccBufferSoc ' + error.message);
+        });
+    }
+
+    setEvccBufferStartSoc(bufferStartSoc: number): void {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/bufferstartsoc/' + bufferStartSoc);
+        axios.post('http://' + this.ip + '/api/bufferstartsoc/' + bufferStartSoc , { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('setEvccBufferStartSoc ' + error.message);
+        });
+    }
+
+    setEvccPrioritySoc(prioritySoc: number): void {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/prioritysoc/' + prioritySoc);
+        axios.post('http://' + this.ip + '/api/prioritysoc/' + prioritySoc , { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('setEvccBufferStartSoc ' + error.message);
+        });
+    }
+    setVehicleMinSoc(vehicleID: string, minSoc: number): void {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/vehicles/'+ vehicleID +'/minsoc/' + minSoc);
+        axios.post('http://' + this.ip + '/api/vehicles/'+ vehicleID +'/minsoc/' + minSoc , { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('14 ' + error.message);
+        });
+    }
+
+    setVehicleLimitSoc(vehicleID: string, minSoc: number): void {
+        this.log.debug('call: ' + 'http://' + this.ip + '/api/vehicles/'+ vehicleID +'/limitsoc/' + minSoc);
+        axios.post('http://' + this.ip + '/api/vehicles/'+ vehicleID +'/limitsoc/' + minSoc , { timeout: this.timeout }).then(() => {
+            this.log.info('Evcc update successful');
+        }).catch(error => {
+            this.log.error('15 ' + error.message);
+        });
+    }
+
+    setVehiclePlan (vehicleID: string, active: boolean, soc: number, time: string): void {
+        if (active) {
+
+            if (time != '' ) {
+                const currentDate = new Date();
+
+            } else {
+                const currentDate = new Date();
+                // Add one day to the current date
+                currentDate.setDate(currentDate.getDate() + 1);
+                // Convert to ISO 8601 / RFC 3339 format
+                let rfc3339Date = currentDate.toISOString();
+            }
+
+
+            //Aktvierungsregel:
+            // wenn aktive false => soc = 0% + time = 0
+            // wenn aktive true => soc = 100% + time = nextday, same time
+            // wenn soc > 0 => active = true + time = nextday, same time
+            // wenn soc < 0 => active = false
+            this.log.debug('call: ' + 'http://' + this.ip + '/api/vehicles/'+ vehicleID + '/plan/soc/100/' + rfc3339Date);
+            axios.post('http://' + this.ip + '/api/vehicles/'+ vehicleID + '/plan/soc/100/' + rfc3339Date , { timeout: this.timeout }).then(() => {
+                this.log.info('Activate plan for verhicle: ' + vehicleID);
+            }).catch(error => {
+                this.log.error('Error active plan: ' + error.message);
+            });
+        } else {
+            this.log.debug('call: ' + 'http://' + this.ip + '/api/vehicles/'+ vehicleID + '/plan/soc');
+            axios.delete('http://' + this.ip + '/api/vehicles/'+ vehicleID + '/plan/soc' , { timeout: this.timeout }).then(() => {
+                this.log.info('Deactivate plan for verhicle: ' + vehicleID);
+            }).catch(error => {
+                this.log.error('Error deactive plan: ' + error.message);
+            });
+        }
+
+    }
 }
 
 if (require.main !== module) {
     // Export the constructor in compact mode
-    // @ts-ignore
     module.exports = (options: Partial<utils.AdapterOptions> | undefined) => new Evcc(options);
 } else {
     // otherwise start the instance directly
