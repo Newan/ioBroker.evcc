@@ -121,20 +121,26 @@
     "compact": true,
     "connectionType": "local",
     "dataSource": "poll",
-    "materialize": true,
     "adminUI": {
-      "config": "json"
+      "config": "json",
+      "tab": "materialize"
     },
+    "globalDependencies": [
+      {
+        "admin": ">=6.0.0"
+      }
+    ],
     "dependencies": [
       {
-        "js-controller": ">=2.0.0"
+        "js-controller": ">=5.0.19"
       }
     ]
   },
   "native": {
     "polltime": 100,
     "ip": "127.0.0.1",
-    "port": "7070"
+    "port": "7070",
+    "dissolveObjects": false,
   },
   "objects": [],
   "instanceObjects": [
@@ -177,136 +183,6 @@
         "read": true,
         "write": false,
         "def": false
-      },
-      "native": {}
-    },
-    {
-      "_id": "status.batteryPower",
-      "type": "state",
-      "common": {
-        "role": "state",
-        "name": "batteryPower",
-        "type": "number",
-        "read": true,
-        "write": false,
-        "def": 0
-      },
-      "native": {}
-    },
-    {
-      "_id": "status.batterySoc",
-      "type": "state",
-      "common": {
-        "role": "state",
-        "name": "batterySoc",
-        "type": "number",
-        "read": true,
-        "write": false,
-        "def": 0
-      },
-      "native": {}
-    },
-    {
-      "_id": "status.gridConfigured",
-      "type": "state",
-      "common": {
-        "role": "state",
-        "name": "gridConfigured",
-        "type": "boolean",
-        "read": true,
-        "write": false,
-        "def": false
-      },
-      "native": {}
-    },
-    {
-      "_id": "status.gridCurrents",
-      "type": "state",
-      "common": {
-        "role": "state",
-        "name": "gridCurrents",
-        "type": "string",
-        "read": true,
-        "write": false,
-        "def": ""
-      },
-      "native": {}
-    },
-    {
-      "_id": "status.gridPower",
-      "type": "state",
-      "common": {
-        "role": "state",
-        "name": "gridPower",
-        "type": "number",
-        "read": true,
-        "write": false,
-        "def": 0
-      },
-      "native": {}
-    },
-    {
-      "_id": "status.homePower",
-      "type": "state",
-      "common": {
-        "role": "state",
-        "name": "homePower",
-        "type": "number",
-        "read": true,
-        "write": false,
-        "def": 0
-      },
-      "native": {}
-    },
-    {
-      "_id": "status.prioritySoc",
-      "type": "state",
-      "common": {
-        "role": "state",
-        "name": "prioritySoc",
-        "type": "number",
-        "read": true,
-        "write": false,
-        "def": 0
-      },
-      "native": {}
-    },
-    {
-      "_id": "status.pvConfigured",
-      "type": "state",
-      "common": {
-        "role": "state",
-        "name": "pvConfigured",
-        "type": "boolean",
-        "read": true,
-        "write": false,
-        "def": false
-      },
-      "native": {}
-    },
-    {
-      "_id": "status.pvPower",
-      "type": "state",
-      "common": {
-        "role": "state",
-        "name": "pvPower",
-        "type": "number",
-        "read": true,
-        "write": false,
-        "def": 0
-      },
-      "native": {}
-    },
-    {
-      "_id": "status.siteTitle",
-      "type": "state",
-      "common": {
-        "role": "state",
-        "name": "siteTitle",
-        "type": "string",
-        "read": true,
-        "write": false,
-        "def": ""
       },
       "native": {}
     }

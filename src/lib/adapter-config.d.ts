@@ -7,6 +7,7 @@ declare global {
             ip: string;
             port: number;
             polltime: number;
+            dissolveObjects: boolean;
         }
     }
 }

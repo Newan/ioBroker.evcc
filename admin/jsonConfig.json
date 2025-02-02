@@ -18,7 +18,7 @@
         },
         "dissolveObjects":  {
            "type": "checkbox",
-           "label": "Dissolve objects",
+           "label": "dissolveObjects",
            "attr": "disabled",
            "width": "30px",
            "title": "Dissolve objects",

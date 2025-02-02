@@ -315,7 +315,7 @@ class Evcc extends utils.Adapter {
                 outData = JSON.stringify(lpData);
             }
 
-            if (knoten !== '') {
+            if (knoten !== '' && this.config.dissolveObjects) {
                 const lpEntryFormatted = lpEntry.replace(/^./, char => char.toUpperCase());
                 // @ts-ignore
                 this.setObjectNotExists(`status.${knoten}${lpEntryFormatted}`, {
