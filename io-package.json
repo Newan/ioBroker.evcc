@@ -1,8 +1,47 @@
 {
   "common": {
     "name": "evcc",
-    "version": "0.0.9",
+    "version": "0.1.1",
     "news": {
+      "0.1.1": {
+        "en": "add batteriemangement\nadd Soc limit to loadpoint\nchange vehicle on loadpoint",
+        "de": "batteriemangement hinzufügen\nhinzufügen Soc-Begrenzung an Ladepunkt\nfahrzeugwechsel bei lastpunkt",
+        "ru": "добавить batteriemangement\nдобавить Предел Soc для точки нагрузки\nпеременное транспортное средство на точке нагрузки",
+        "pt": "adicionar batteriemangement\nadicionar Limite de soc para ponto de carga\nveículo de mudança no ponto de carga",
+        "nl": "batteriebeheer toevoegen\ntoevoegen Soc-limiet tot belastingspunt\nhet voertuig op het laadpunt wijzigen",
+        "fr": "ajouter batteriemangiment\najouter Limite de Soc au point de charge\nchangement de véhicule au point de charge",
+        "it": "aggiungere batteriemangement\naggiungere Limite di soc per punto di carico\ncambiare veicolo sul punto di carico",
+        "es": "añadir batteriemangement\nañadir Límite de soc a punto de carga\nvehículo de cambio en el punto de carga",
+        "pl": "dodaj batteriemangement\ndodaj Granica SOC do punktu ładowania\nzmiana pojazdu w punkcie załadunku",
+        "uk": "додати batteriemangement\nдодати Обмеження Soc до Loadpoint\nзміна транспортного засобу на loadpoint",
+        "zh-cn": "添加击鼓\n添加 装入点的索克限制\n在负载点更换车辆"
+      },
+      "0.1.0": {
+        "en": "rewrite for evcc api changes\nadd multiple vehicle",
+        "de": "neu schreiben für evcc api änderungen\nmehrere fahrzeuge",
+        "ru": "переписать для evcc api изменений\nдобавить несколько транспортных средств",
+        "pt": "reescrever para mudanças de api evcc\nadicionar vários veículos",
+        "nl": "herschrijf voor evcc api veranderingen\nvoeg meerdere voertuigen toe",
+        "fr": "réécriture pour evcc api changes\najouter plusieurs véhicules",
+        "it": "riscrittura per evcc api modifiche\naggiungere più veicoli",
+        "es": "reescribir para cambios de evcc api\nañadir el vehículo múltiple",
+        "pl": "rewrite for evcc api changes (ang.)\ndodać multiple pojazdy",
+        "uk": "rewrite для evcc api зміни\nдодати багаторазовий автомобіль",
+        "zh-cn": "投 影\n增加多种车辆"
+      },
+      "0.0.10": {
+        "en": "generate dynamic objects\ntypo fixes",
+        "de": "dynamische objekte erzeugen\ntypo fixes",
+        "ru": "генерировать динамические объекты\ntypo исправления",
+        "pt": "gerar objetos dinâmicos\ncorreções de tipo",
+        "nl": "genereerde dynamische objecten\ntypo fixes",
+        "fr": "générer des objets dynamiques\ntypo corrige",
+        "it": "generare oggetti dinamici\ncorrezioni di battitura",
+        "es": "generar objetos dinámicos\ntypo fixes",
+        "pl": "generują dynamiczne obiekty\ntypo",
+        "uk": "генерувати динамічні об'єкти\nтипофіксатори",
+        "zh-cn": "产生动态目标\n类型"
+      },
       "0.0.8": {
         "en": "fix for minSoc & targetSoc",
         "de": "fix für minSoc & Ziel Soja",
@@ -52,30 +91,6 @@
         "es": "primera liberación",
         "pl": "pierwsze wydanie",
         "zh-cn": "首次释放"
-      },
-      "0.0.3": {
-        "en": "(Newan) support evcc 0.9X - change to jsonConfig GUI",
-        "de": "(Newan) Unterstützung von evcc 0.9X - Wechsel zu jsonConfig GUI",
-        "ru": "(Newan) поддержка evcc 0.9X - изменение графического интерфейса jsonConfig",
-        "pt": "(Newan) suporte evcc 0.9X - mude para jsonConfig GUI",
-        "nl": "(Newan) ondersteuning voor evcc 0.9X - verander naar jsonConfig GUI",
-        "fr": "(Newan) prend en charge evcc 0.9X - passe à l'interface graphique jsonConfig",
-        "it": "(Newan) supporta evcc 0.9X - cambia in jsonConfig GUI",
-        "es": "(Newan) soporte evcc 0.9X - cambio a jsonConfig GUI",
-        "pl": "(Newan) obsługuje evcc 0.9X - zmiana na GUI jsonConfig",
-        "zh-cn": "(Newan) 支持 evcc 0.9X - 更改为 jsonConfig GUI"
-      },
-      "0.0.1": {
-        "en": "initial release",
-        "de": "Erstveröffentlichung",
-        "ru": "Начальная версия",
-        "pt": "lançamento inicial",
-        "nl": "Eerste uitgave",
-        "fr": "Première version",
-        "it": "Versione iniziale",
-        "es": "Versión inicial",
-        "pl": "Pierwsze wydanie",
-        "zh-cn": "首次出版"
       }
     },
     "titleLang": {
@@ -170,19 +185,6 @@
       "type": "channel",
       "common": {
         "name": "Status"
-      },
-      "native": {}
-    },
-    {
-      "_id": "status.batteryConfigured",
-      "type": "state",
-      "common": {
-        "role": "state",
-        "name": "batteryConfigured",
-        "type": "boolean",
-        "read": true,
-        "write": false,
-        "def": false
       },
       "native": {}
     }
