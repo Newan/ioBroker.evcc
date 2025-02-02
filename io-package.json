@@ -155,7 +155,7 @@
     "polltime": 100,
     "ip": "127.0.0.1",
     "port": "7070",
-    "dissolveObjects": false,
+    "dissolveObjects": false
   },
   "objects": [],
   "instanceObjects": [
