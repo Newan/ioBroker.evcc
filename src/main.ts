@@ -317,6 +317,7 @@ class Evcc extends utils.Adapter {
 
             if (knoten !== '') {
                 const lpEntryFormatted = lpEntry.replace(/^./, char => char.toUpperCase());
+                // @ts-ignore
                 this.setObjectNotExists(`status.${knoten}${lpEntryFormatted}`, {
                     type: 'state',
                     common: {
@@ -331,6 +332,7 @@ class Evcc extends utils.Adapter {
 
                 this.setState(`status.${knoten}${lpEntryFormatted}`, outData, true);
             } else {
+                // @ts-ignore
                 this.setObjectNotExists(`status.${lpEntry}`, {
                     type: 'state',
                     common: {
