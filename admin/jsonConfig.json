@@ -1,4 +1,4 @@
- {
+{
   "i18n": true,
   "type": "tabs",
   "items": {
@@ -17,13 +17,14 @@
           "lg": 6
         },
         "dissolveObjects":  {
-           "type": "checkbox",
-           "label": "dissolveObjects",
-           "attr": "disabled",
-           "width": "30px",
-           "title": "Dissolve objects",
-           "default": false
-         },
+          "newLine": true,
+          "type": "checkbox",
+          "label": "dissolveObjects",
+          "default": false,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
+        },
         "ip": {
           "newLine": true,
           "type": "text",
@@ -46,16 +47,6 @@
         "_spacer": {
           "type": "divider",
           "color": "secondary"
-        },
-        "_donation": {
-          "newLine": true,
-          "type": "staticLink",
-          "href": "https://www.paypal.com/donate/?hosted_button_id=KNPGJTDLWR4CG",
-          "button": "button",
-          "icon": "https://www.paypalobjects.com/en_US/DK/i/btn/btn_donateCC_LG.gif",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
         }
       }
     }
