@@ -1,4 +1,4 @@
-{
+ {
   "i18n": true,
   "type": "tabs",
   "items": {
@@ -12,27 +12,33 @@
           "label": "polltime",
           "help": "polltime_help",
           "min": 1,
+          "xs": 12,
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 4,
+          "xl": 4
         },
         "dissolveObjects":  {
           "newLine": true,
           "type": "checkbox",
           "label": "dissolveObjects",
           "default": false,
+          "xs": 12,
           "sm": 12,
           "md": 6,
-          "lg": 6
-        },
+          "lg": 4,
+          "xl": 4
+         },
         "ip": {
           "newLine": true,
           "type": "text",
           "label": "ip",
           "help": "ip_help",
+          "xs": 12,
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 4,
+          "xl": 4
         },
         "port": {
           "newLine": false,
@@ -40,9 +46,11 @@
           "label": "port",
           "help": "port_help",
           "min": 1,
+          "xs": 12,
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 4,
+          "xl": 4
         },
         "_spacer": {
           "type": "divider",
