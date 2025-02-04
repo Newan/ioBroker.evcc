@@ -295,19 +295,19 @@ class Evcc extends utils.Adapter {
             }
             //Update der Control Werte
             if (lpEntry === 'bufferStartSoc') {
-                await this.setStateAsync('control.bufferStartSoc', { val: lpData, ack: true });
+                this.setState('control.bufferStartSoc', { val: lpData, ack: true });
             }
             else if (lpEntry === 'prioritySoc') {
-                await this.setStateAsync('control.prioritySoc', { val: lpData, ack: true });
+                this.setState('control.prioritySoc', { val: lpData, ack: true });
             }
             else if (lpEntry === 'bufferSoc') {
-                await this.setStateAsync('control.bufferSoc', { val: lpData, ack: true });
+                this.setState('control.bufferSoc', { val: lpData, ack: true });
             }
             let outData = lpData;
             if (lpType === 'object' && lpData !== null) {
                 if (this.config.dissolveObjects) {
                     const lpEntryFormatted = lpEntry.replace(/^./, char => char.toUpperCase());
-
+                    // @ts-ignore
                     this.setObjectNotExists(`status.${lpEntryFormatted}`, {
                         type: 'channel',
                         common: {
@@ -324,7 +324,7 @@ class Evcc extends utils.Adapter {
                             const lpEntryFormatted1 = isNaN(Number(lpEntry1))
                                 ? lpEntry1.replace(/^./, char => char.toUpperCase())
                                 : lpEntry1;
-
+                            // @ts-ignore
                             this.setObjectNotExists(`status.${lpEntryFormatted1}`, {
                                 type: 'channel',
                                 common: {
@@ -337,6 +337,7 @@ class Evcc extends utils.Adapter {
                             for (const dataPoint in lpData1) {
                                 const keyData = lpData1[dataPoint];
                                 const keyType = typeof dataPoint;
+
                                 // @ts-ignore
                                 this.setObjectNotExists(`${pfad}.${dataPoint}`, {
                                     type: 'state',
@@ -354,23 +355,19 @@ class Evcc extends utils.Adapter {
                         }
                         else {
                             const pfad = `status.${lpEntryFormatted}`;
-                            for (const dataPoint in lpData1) {
-                                const keyData = lpData1[dataPoint];
-                                const keyType = typeof dataPoint;
-                                // @ts-ignore
-                                this.setObjectNotExists(`${pfad}.${dataPoint}`, {
-                                    type: 'state',
-                                    common: {
-                                        role: 'value',
-                                        name: keyData,
-                                        type: lpType1,
-                                        read: true,
-                                        write: false,
-                                    },
-                                    native: {},
-                                });
-                                this.setState(`${pfad}.${dataPoint}`, keyData, true);
-                            }
+                            // @ts-ignore
+                            this.setObjectNotExists(`${pfad}.${lpEntry1}`, {
+                                type: 'state',
+                                common: {
+                                    role: 'value',
+                                    name: lpEntry1,
+                                    type: lpType1,
+                                    read: true,
+                                    write: false,
+                                },
+                                native: {},
+                            });
+                            this.setState(`${pfad}.${lpEntry1}`, lpData1, true);
                         }
                     }
                 }
@@ -392,7 +389,7 @@ class Evcc extends utils.Adapter {
                 });
 
                 if (lpType === 'object' && lpData !== null) {
-                    if (this.config.dissolveObjects) {        // rufe sich selbst nochmal auf zum knoten auflösen
+                    if (this.config.dissolveObjects) {
                         await this.setStatusEvcc(lpData, lpEntry);
                     }
                     outData = JSON.stringify(lpData);
