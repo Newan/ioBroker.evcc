@@ -345,7 +345,7 @@ class Evcc extends utils.Adapter {
                                 ? lpEntry1.replace(/^./, char => char.toUpperCase())
                                 : lpEntry1;
                             // @ts-ignore
-                            this.setObjectNotExists(`status.${lpEntryFormatted1}`, {
+                            this.setObjectNotExists(`status.${lpEntryFormatted}.${lpEntryFormatted1}`, {
                                 type: 'channel',
                                 common: {
                                     role: 'value',
