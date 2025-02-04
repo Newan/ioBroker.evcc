@@ -6,5 +6,5 @@
     "ip_help": "IP-Adresse zu Ihrer evcc-Installation",
     "port": "Port",
     "port_help": "Port zu Ihrer evcc-Installation",
-    "Dissolve objects": "Knoten auflösen"
+    "dissolveObjects": "Status Knoten auflösen"
 }

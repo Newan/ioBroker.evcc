@@ -145,7 +145,7 @@ class Evcc extends utils.Adapter {
                                 switch(idProperty[5]) {
                                     case 'active':
                                         this.log.info('Set plan.active on vehicle: ' + idProperty[3]+ ' to ' + state.val);
-                                        this.setVehiclePlan(idProperty[3], Boolean(state.val), 0, 0);
+                                        this.setVehiclePlan(idProperty[3], Boolean(state.val), 0);
                                         break;
                                 }
                                 this.setVehicleLimitSoc(idProperty[3], Number(state.val));
@@ -187,7 +187,7 @@ class Evcc extends utils.Adapter {
                 this.log.debug('Get-Data from evcc:' + JSON.stringify(response.data));
 
                 //Global status Items - ohne loadpoints - ohne vehicle
-                this.setStatusEvcc(response.data.result);
+                this.setStatusEvcc(response.data.result, '');
 
                 //Laden jeden Ladepunkt einzeln
                 const tmpListLoadpoints: Loadpoint[] = response.data.result.loadpoints;
@@ -277,8 +277,9 @@ class Evcc extends utils.Adapter {
         this.subscribeStates('control.bufferStartSoc');
     }
 
-    async setStatusEvcc(daten, knoten) {
+    async setStatusEvcc(daten:any, knoten: string): Promise<void> {
         //Dynamisch erstellen
+
         for (const lpEntry in daten) {
             if (!daten.hasOwnProperty(lpEntry)) {
                 continue;
@@ -305,25 +306,97 @@ class Evcc extends utils.Adapter {
             let outData = lpData;
             if (lpType === 'object' && lpData !== null) {
                 if (this.config.dissolveObjects) {
-                    await this.setStatusEvcc(lpData, lpEntry);
+                    const lpEntryFormatted = lpEntry.replace(/^./, char => char.toUpperCase());
+
+                    this.setObjectNotExists(`status.${lpEntryFormatted}`, {
+                        type: 'channel',
+                        common: {
+                            role: 'value',
+                            name: lpEntryFormatted
+                        },
+                        native: {},
+                    });
+                    for (const lpEntry1 in outData) {
+                        const lpData1 = outData[lpEntry1];
+                        const lpType1 = typeof lpData1;
+
+                        if (lpType1 === 'object' && lpData1 !== null) {
+                            const lpEntryFormatted1 = isNaN(Number(lpEntry1))
+                                ? lpEntry1.replace(/^./, char => char.toUpperCase())
+                                : lpEntry1;
+
+                            this.setObjectNotExists(`status.${lpEntryFormatted1}`, {
+                                type: 'channel',
+                                common: {
+                                    role: 'value',
+                                    name: lpEntryFormatted1
+                                },
+                                native: {},
+                            });
+                            const pfad = `status.${lpEntryFormatted}.${lpEntryFormatted1}`;
+                            for (const dataPoint in lpData1) {
+                                const keyData = lpData1[dataPoint];
+                                const keyType = typeof dataPoint;
+                                // @ts-ignore
+                                this.setObjectNotExists(`${pfad}.${dataPoint}`, {
+                                    type: 'state',
+                                    common: {
+                                        role: 'value',
+                                        name: dataPoint,
+                                        type: keyType,
+                                        read: true,
+                                        write: false,
+                                    },
+                                    native: {},
+                                });
+                                this.setState(`${pfad}.${dataPoint}`, keyData, true);
+                            }
+                        }
+                        else {
+                            const pfad = `status.${lpEntryFormatted}`;
+                            for (const dataPoint in lpData1) {
+                                const keyData = lpData1[dataPoint];
+                                const keyType = typeof dataPoint;
+                                // @ts-ignore
+                                this.setObjectNotExists(`${pfad}.${dataPoint}`, {
+                                    type: 'state',
+                                    common: {
+                                        role: 'value',
+                                        name: keyData,
+                                        type: lpType1,
+                                        read: true,
+                                        write: false,
+                                    },
+                                    native: {},
+                                });
+                                this.setState(`${pfad}.${dataPoint}`, keyData, true);
+                            }
+                        }
+                    }
                 }
                 outData = JSON.stringify(lpData);
             }
+
             if (knoten !== '' && this.config.dissolveObjects) {
-                const lpEntryFormatted = lpEntry.replace(/^./, char => char.toUpperCase());
                 // @ts-ignore
-                this.setObjectNotExists(`status.${knoten}${lpEntryFormatted}`, {
+                this.setObjectNotExists(`status.${lpEntry}`, {
                     type: 'state',
                     common: {
                         role: 'value',
-                        name: `${lpEntry}`,
-                        type: `${lpType}`,
+                        name: lpEntry,
+                        type: lpType,
                         read: true,
                         write: false,
                     },
                     native: {},
                 });
-                this.setState(`status.${knoten}${lpEntryFormatted}`, outData, true);
+
+                if (lpType === 'object' && lpData !== null) {
+                    if (this.config.dissolveObjects) {        // rufe sich selbst nochmal auf zum knoten auflösen
+                        await this.setStatusEvcc(lpData, lpEntry);
+                    }
+                    outData = JSON.stringify(lpData);
+                }
             }
             else {
                 // @ts-ignore
@@ -331,8 +404,8 @@ class Evcc extends utils.Adapter {
                     type: 'state',
                     common: {
                         role: 'value',
-                        name: `${lpEntry}`,
-                        type: `${lpType}`,
+                        name: lpEntry,
+                        type: lpType,
                         read: true,
                         write: false,
                     },
@@ -871,20 +944,14 @@ class Evcc extends utils.Adapter {
         });
     }
 
-    setVehiclePlan (vehicleID: string, active: boolean, soc: number, time: string): void {
+    setVehiclePlan (vehicleID: string, active: boolean, soc: number): void {
         if (active) {
 
-            if (time != '' ) {
-                const currentDate = new Date();
-
-            } else {
-                const currentDate = new Date();
-                // Add one day to the current date
-                currentDate.setDate(currentDate.getDate() + 1);
-                // Convert to ISO 8601 / RFC 3339 format
-                let rfc3339Date = currentDate.toISOString();
-            }
-
+            const currentDate = new Date();
+            // Add one day to the current date
+            currentDate.setDate(currentDate.getDate() + 1);
+            // Convert to ISO 8601 / RFC 3339 format
+            let rfc3339Date = currentDate.toISOString();
 
             //Aktvierungsregel:
             // wenn aktive false => soc = 0% + time = 0

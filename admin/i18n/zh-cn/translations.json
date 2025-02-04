@@ -5,5 +5,6 @@
     "ip": "知识产权",
     "ip_help": "IP 地址到您的 evcc 安装",
     "port": "港口",
-    "port_help": "移植到您的 evcc 安装"
+    "port_help": "移植到您的 evcc 安装",
+    "dissolveObjects": "Dissolve status objects"
 }
