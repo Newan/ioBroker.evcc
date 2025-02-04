@@ -336,7 +336,7 @@ class Evcc extends utils.Adapter {
                             const pfad = `status.${lpEntryFormatted}.${lpEntryFormatted1}`;
                             for (const dataPoint in lpData1) {
                                 const keyData = lpData1[dataPoint];
-                                const keyType = typeof dataPoint;
+                                const keyType = typeof keyData;
 
                                 // @ts-ignore
                                 this.setObjectNotExists(`${pfad}.${dataPoint}`, {
