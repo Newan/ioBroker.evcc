@@ -354,23 +354,29 @@ class Evcc extends utils.Adapter {
                                 native: {},
                             });
                             const pfad = `status.${lpEntryFormatted}.${lpEntryFormatted1}`;
-                            for (const dataPoint in lpData1) {
-                                const keyData = lpData1[dataPoint];
-                                const keyType = typeof keyData;
-                                // @ts-ignore
-                                this.setObjectNotExists(`${pfad}.${dataPoint}`, {
-                                    type: 'state',
-                                    common: {
-                                        role: 'value',
-                                        name: dataPoint,
-                                        type: keyType,
-                                        read: true,
-                                        write: false,
-                                    },
-                                    native: {},
-                                });
-                                this.setState(`${pfad}.${dataPoint}`, keyData, true);
-                            }
+                                for (const dataPoint in lpData1) {
+                                    const keyData = lpData1[dataPoint];
+                                    const keyType = typeof keyData;
+                                    // @ts-ignore
+                                    this.setObjectNotExists(`${pfad}.${dataPoint}`, {
+                                        type: 'state',
+                                        common: {
+                                            role: 'value',
+                                            name: dataPoint,
+                                            type: keyType,
+                                            read: true,
+                                            write: false,
+                                        },
+                                        native: {},
+                                    });
+                                    try {
+                                        this.setState(`${pfad}.${dataPoint}`, keyData, true);
+                                    } catch (error) {
+                                        this.log.error(`error pfad ${pfad}.${dataPoint} obj ${dataPoint}`);
+                                    
+                                    }
+                                }
+                                
                         }
                         else {
                             const pfad = `status.${lpEntryFormatted}`;
