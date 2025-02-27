@@ -37,6 +37,7 @@
         "inlineSourceMap": false,
         "useUnknownInCatchVariables": false,
         "types": ["@iobroker/types"]
+
     },
     "include": ["src/**/*.ts", "./.eslintrc.js"],
     "exclude": ["build/**", "node_modules/**", "src-admin/**"]
