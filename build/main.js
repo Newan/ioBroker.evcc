@@ -372,7 +372,7 @@ class Evcc extends utils.Adapter {
                                     try {
                                         this.setState(`${pfad}.${dataPoint}`, keyData, true);
                                     } catch (error) {
-                                        this.log.error(`error pfad ${pfad}.${dataPoint} obj ${dataPoint}`);
+                                        this.log.error(`error pfad ${pfad}.${dataPoint} obj ${keyData}`);
                                     
                                     }
                                 }
