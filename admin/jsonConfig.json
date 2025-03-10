@@ -12,18 +12,33 @@
           "label": "polltime",
           "help": "polltime_help",
           "min": 1,
+          "xs": 12,
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 4,
+          "xl": 4
         },
+        "dissolveObjects":  {
+          "newLine": true,
+          "type": "checkbox",
+          "label": "dissolveObjects",
+          "default": false,
+          "xs": 12,
+          "sm": 12,
+          "md": 6,
+          "lg": 4,
+          "xl": 4
+         },
         "ip": {
           "newLine": true,
           "type": "text",
           "label": "ip",
           "help": "ip_help",
+          "xs": 12,
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 4,
+          "xl": 4
         },
         "port": {
           "newLine": false,
@@ -31,23 +46,15 @@
           "label": "port",
           "help": "port_help",
           "min": 1,
+          "xs": 12,
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 4,
+          "xl": 4
         },
         "_spacer": {
           "type": "divider",
           "color": "secondary"
-        },
-        "_donation": {
-          "newLine": true,
-          "type": "staticLink",
-          "href": "https://www.paypal.com/donate/?hosted_button_id=KNPGJTDLWR4CG",
-          "button": "button",
-          "icon": "https://www.paypalobjects.com/en_US/DK/i/btn/btn_donateCC_LG.gif",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
         }
       }
     }

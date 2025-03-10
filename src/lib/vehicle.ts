@@ -9,3 +9,4 @@ export interface Plan {
     soc: number;
     time: string;
 }
+

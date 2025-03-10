@@ -136,20 +136,26 @@
     "compact": true,
     "connectionType": "local",
     "dataSource": "poll",
-    "materialize": true,
     "adminUI": {
-      "config": "json"
+      "config": "json",
+      "tab": "materialize"
     },
+    "globalDependencies": [
+      {
+        "admin": ">=6.0.0"
+      }
+    ],
     "dependencies": [
       {
-        "js-controller": ">=2.0.0"
+        "js-controller": ">=5.0.19"
       }
     ]
   },
   "native": {
     "polltime": 100,
     "ip": "127.0.0.1",
-    "port": "7070"
+    "port": "7070",
+    "dissolveObjects": false
   },
   "objects": [],
   "instanceObjects": [

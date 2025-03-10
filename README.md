@@ -21,6 +21,10 @@ Forum: https://forum.iobroker.net/topic/49165/neuer-adapter-iobroker-evcc
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+
+### **WORK IN PROGRESS**
+* (arteck) generate status folder
+
 ### 0.1.1 (2024-01-07)
 * (Newan) add batteriemangement
 * (Newan) add Soc limit to loadpoint

@@ -1,7 +1,11 @@
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -11,13 +15,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -25,15 +39,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const utils = __importStar(require("@iobroker/adapter-core"));
 const axios_1 = __importDefault(require("axios"));
 class Evcc extends utils.Adapter {
+    ip = '';
+    polltime = 0;
+    timeout = 1000;
+    maxLoadpointIndex = -1;
+    adapterIntervals; //halten von allen Intervallen
     constructor(options = {}) {
         super({
             ...options,
             name: 'evcc',
         });
-        this.ip = '';
-        this.polltime = 0;
-        this.timeout = 1000;
-        this.maxLoadpointIndex = -1;
         this.on('ready', this.onReady.bind(this));
         this.on('stateChange', this.onStateChange.bind(this));
         this.on('unload', this.onUnload.bind(this));
@@ -160,7 +175,7 @@ class Evcc extends utils.Adapter {
                                 switch (idProperty[5]) {
                                     case 'active':
                                         this.log.info('Set plan.active on vehicle: ' + idProperty[3] + ' to ' + state.val);
-                                        this.setVehiclePlan(idProperty[3], Boolean(state.val), 0, 0);
+                                        this.setVehiclePlan(idProperty[3], Boolean(state.val), 0);
                                         break;
                                 }
                                 this.setVehicleLimitSoc(idProperty[3], Number(state.val));
@@ -201,7 +216,7 @@ class Evcc extends utils.Adapter {
             (0, axios_1.default)('http://' + this.ip + '/api/state', { timeout: this.timeout }).then(async (response) => {
                 this.log.debug('Get-Data from evcc:' + JSON.stringify(response.data));
                 //Global status Items - ohne loadpoints - ohne vehicle
-                this.setStatusEvcc(response.data.result);
+                this.setStatusEvcc(response.data.result, '');
                 //Laden jeden Ladepunkt einzeln
                 const tmpListLoadpoints = response.data.result.loadpoints;
                 tmpListLoadpoints.forEach(async (loadpoint, index) => {
@@ -284,34 +299,140 @@ class Evcc extends utils.Adapter {
         });
         this.subscribeStates('control.bufferStartSoc');
     }
-    async setStatusEvcc(daten) {
+    async setStatusEvcc(daten, knoten) {
         //Dynamisch erstellen
         for (const lpEntry in daten) {
-            const lpType = typeof daten[lpEntry]; // get Type of Variable as String, like string/number/boolean
-            let lpData = daten[lpEntry];
+            if (!daten.hasOwnProperty(lpEntry)) {
+                continue;
+            }
+            const lpData = daten[lpEntry];
+            if (JSON.stringify(lpData) === '{}' || JSON.stringify(lpData) === '[]') {
+                continue;
+            }
+            const lpType = typeof lpData; // get Type of Variable as String, like string/number/boolean
             //TODO noch PV uns statístic ausführen
             if (lpEntry == 'result' || lpEntry == 'vehicles' || lpEntry == 'loadpoints') {
                 continue;
             }
             //Update der Control Werte
-            lpEntry == 'bufferStartSoc' && await this.setStateAsync('control.bufferStartSoc', { val: lpData, ack: true });
-            lpEntry == 'prioritySoc' && await this.setStateAsync('control.prioritySoc', { val: lpData, ack: true });
-            lpEntry == 'bufferSoc' && await this.setStateAsync('control.bufferSoc', { val: lpData, ack: true });
-            if (lpType == 'object') {
-                lpData = JSON.stringify(daten[lpEntry]);
+            if (lpEntry === 'bufferStartSoc') {
+                this.setState('control.bufferStartSoc', { val: lpData, ack: true });
             }
-            await this.extendObjectAsync(`status.${lpEntry}`, {
-                type: 'state',
-                common: {
-                    name: lpEntry,
-                    type: lpType,
-                    read: true,
-                    write: false,
-                    role: 'value',
-                },
-                native: {},
-            });
-            await this.setState(`status.${lpEntry}`, lpData, true);
+            else if (lpEntry === 'prioritySoc') {
+                this.setState('control.prioritySoc', { val: lpData, ack: true });
+            }
+            else if (lpEntry === 'bufferSoc') {
+                this.setState('control.bufferSoc', { val: lpData, ack: true });
+            }
+            let outData = lpData;
+            if (lpType === 'object' && lpData !== null) {
+                if (this.config.dissolveObjects) {
+                    const lpEntryFormatted = lpEntry.replace(/^./, char => char.toUpperCase());
+                    // @ts-ignore
+                    this.setObjectNotExists(`status.${lpEntryFormatted}`, {
+                        type: 'channel',
+                        common: {
+                            role: 'value',
+                            name: lpEntryFormatted
+                        },
+                        native: {},
+                    });
+                    for (const lpEntry1 in outData) {
+                        const lpData1 = outData[lpEntry1];
+                        const lpType1 = typeof lpData1;
+                        if (lpType1 === 'object' && lpData1 !== null) {
+                            const lpEntryFormatted1 = isNaN(Number(lpEntry1))
+                                ? lpEntry1.replace(/^./, char => char.toUpperCase())
+                                : lpEntry1;
+                            // @ts-ignore
+                            this.setObjectNotExists(`status.${lpEntryFormatted}.${lpEntryFormatted1}`, {
+                                type: 'channel',
+                                common: {
+                                    role: 'value',
+                                    name: lpEntryFormatted1
+                                },
+                                native: {},
+                            });
+                            const pfad = `status.${lpEntryFormatted}.${lpEntryFormatted1}`;
+                                for (const dataPoint in lpData1) {
+                                    const keyData = lpData1[dataPoint];
+                                    const keyType = typeof keyData;
+                                    // @ts-ignore
+                                    this.setObjectNotExists(`${pfad}.${dataPoint}`, {
+                                        type: 'state',
+                                        common: {
+                                            role: 'value',
+                                            name: dataPoint,
+                                            type: keyType,
+                                            read: true,
+                                            write: false,
+                                        },
+                                        native: {},
+                                    });
+                                    try {
+                                        this.setState(`${pfad}.${dataPoint}`, keyData, true);
+                                    } catch (error) {
+                                        this.log.error(`error pfad ${pfad}.${dataPoint} obj ${keyData}`);
+                                    
+                                    }
+                                }
+                                
+                        }
+                        else {
+                            const pfad = `status.${lpEntryFormatted}`;
+                            // @ts-ignore
+                            this.setObjectNotExists(`${pfad}.${lpEntry1}`, {
+                                type: 'state',
+                                common: {
+                                    role: 'value',
+                                    name: lpEntry1,
+                                    type: lpType1,
+                                    read: true,
+                                    write: false,
+                                },
+                                native: {},
+                            });
+                            this.setState(`${pfad}.${lpEntry1}`, lpData1, true);
+                        }
+                    }
+                }
+                outData = JSON.stringify(lpData);
+            }
+            if (knoten !== '' && this.config.dissolveObjects) {
+                // @ts-ignore
+                this.setObjectNotExists(`status.${lpEntry}`, {
+                    type: 'state',
+                    common: {
+                        role: 'value',
+                        name: lpEntry,
+                        type: lpType,
+                        read: true,
+                        write: false,
+                    },
+                    native: {},
+                });
+                if (lpType === 'object' && lpData !== null) {
+                    if (this.config.dissolveObjects) {
+                        await this.setStatusEvcc(lpData, lpEntry);
+                    }
+                    outData = JSON.stringify(lpData);
+                }
+            }
+            else {
+                // @ts-ignore
+                this.setObjectNotExists(`status.${lpEntry}`, {
+                    type: 'state',
+                    common: {
+                        role: 'value',
+                        name: lpEntry,
+                        type: lpType,
+                        read: true,
+                        write: false,
+                    },
+                    native: {},
+                });
+                this.setState(`status.${lpEntry}`, outData, true);
+            }
         }
     }
     /**
@@ -787,23 +908,20 @@ class Evcc extends utils.Adapter {
             this.log.error('15 ' + error.message);
         });
     }
-    setVehiclePlan(vehicleID, active, soc, time) {
+    setVehiclePlan(vehicleID, active, soc) {
         if (active) {
-            if (time < 0) { }
-            else {
-                const currentDate = new Date();
-                // Add one day to the current date
-                currentDate.setDate(currentDate.getDate() + 1);
-                // Convert to ISO 8601 / RFC 3339 format
-                let rfc3339Date = currentDate.toISOString();
-            }
+            const currentDate = new Date();
+            // Add one day to the current date
+            currentDate.setDate(currentDate.getDate() + 1);
+            // Convert to ISO 8601 / RFC 3339 format
+            let rfc3339Date = currentDate.toISOString();
             //Aktvierungsregel:
             // wenn aktive false => soc = 0% + time = 0
             // wenn aktive true => soc = 100% + time = nextday, same time
             // wenn soc > 0 => active = true + time = nextday, same time
             // wenn soc < 0 => active = false
-            this.log.debug('call: ' + 'http://' + this.ip + '/api/vehicles/' + vehicleID + '/plan/soc/100/');
-            axios_1.default.post('http://' + this.ip + '/api/vehicles/' + vehicleID + '/plan/soc/100/2024-05-20T05:45:00.000Z', { timeout: this.timeout }).then(() => {
+            this.log.debug('call: ' + 'http://' + this.ip + '/api/vehicles/' + vehicleID + '/plan/soc/100/' + rfc3339Date);
+            axios_1.default.post('http://' + this.ip + '/api/vehicles/' + vehicleID + '/plan/soc/100/' + rfc3339Date, { timeout: this.timeout }).then(() => {
                 this.log.info('Activate plan for verhicle: ' + vehicleID);
             }).catch(error => {
                 this.log.error('Error active plan: ' + error.message);

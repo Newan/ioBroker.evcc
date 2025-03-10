@@ -5,5 +5,6 @@
     "ip": "IP",
     "ip_help": "Dirección IP de su instalación evcc",
     "port": "Puerto",
-    "port_help": "Puerto a su instalación evcc"
+    "port_help": "Puerto a su instalación evcc",
+    "dissolveObjects": "Disolver objetos de estado"
 }

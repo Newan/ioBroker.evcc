@@ -5,6 +5,7 @@
 "ip": "IP",
 "ip_help": "IP-Adress to your evcc instalation",
 "port": "Port",
-"port_help": "Port to your evcc instalation"
+"port_help": "Port to your evcc instalation",
+  "dissolveObjects": "Dissolve status objects"
 
 }
