@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "evcc",
-    "version": "0.1.1",
+    "version": "0.2.0",
     "news": {
+      "0.2.0": {
+        "en": "generate status folder",
+        "de": "statusordner erstellen",
+        "ru": "генерировать статусную папку",
+        "pt": "gerar pasta de status",
+        "nl": "statusmap genereren",
+        "fr": "générer le dossier d'état",
+        "it": "generare cartella di stato",
+        "es": "generar carpeta de estado",
+        "pl": "generowanie folderu statusu",
+        "uk": "генерувати папку стану",
+        "zh-cn": "生成状态文件夹"
+      },
       "0.1.1": {
         "en": "add batteriemangement\nadd Soc limit to loadpoint\nchange vehicle on loadpoint",
         "de": "batteriemangement hinzufügen\nhinzufügen Soc-Begrenzung an Ladepunkt\nfahrzeugwechsel bei lastpunkt",
@@ -79,18 +92,6 @@
         "es": "actualización para el último repositorio",
         "pl": "aktualizacja do najnowszego repozytorium",
         "zh-cn": "更新最新存储库"
-      },
-      "0.0.4": {
-        "en": "first release",
-        "de": "erste veröffentlichung",
-        "ru": "первый релиз",
-        "pt": "primeiro lançamento",
-        "nl": "eerste vrijlating",
-        "fr": "première version",
-        "it": "primo rilascio",
-        "es": "primera liberación",
-        "pl": "pierwsze wydanie",
-        "zh-cn": "首次释放"
       }
     },
     "titleLang": {

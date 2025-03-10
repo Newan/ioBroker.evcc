@@ -1,6 +1,6 @@
 {
   "name": "iobroker.evcc",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Controll evcc over rest api",
   "author": {
     "name": "Newan",
@@ -16,11 +16,11 @@
     "url": "https://github.com/Newan/ioBroker.evcc"
   },
   "dependencies": {
-     "@iobroker/adapter-core": "^3.2.3",
+    "@iobroker/adapter-core": "^3.2.3",
     "axios": "^1.7.9"
   },
   "devDependencies": {
-   "@alcalzone/release-script": "^3.7.0",
+    "@alcalzone/release-script": "^3.7.0",
     "@alcalzone/release-script-plugin-iobroker": "^3.7.0",
     "@alcalzone/release-script-plugin-license": "^3.7.0",
     "@alcalzone/release-script-plugin-manual-review": "^3.7.0",
@@ -63,7 +63,7 @@
     "test:integration": "mocha test/integration --exit",
     "test": "npm run test:ts && npm run test:package",
     "check": "tsc --noEmit",
-    "lint": "eslint -c eslint.config.mjs",
+    "lint": "eslint -c eslint.config.mjs .",
     "release": "release-script",
     "translate": "translate-adapter"
   },
