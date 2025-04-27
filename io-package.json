@@ -104,11 +104,13 @@
       "it": "EVCC",
       "es": "EVCC",
       "pl": "EVCC",
+      "uk": "EVCC",
       "zh-cn": "EVCC"
     },
     "desc": {
       "en": "Controll evcc over rest api",
       "de": "Kontrollieren Sie evcc über Ruhe-API",
+      "uk": "Контролюйте evcc над rest api",
       "ru": "Управляйте evcc через api отдыха",
       "pt": "Controlar evcc sobre api resto",
       "nl": "Controle evcc over rust api",
@@ -124,9 +126,11 @@
     "keywords": [
       "evcc pv charge"
     ],
-    "license": "MIT",
-    "platform": "Javascript/Node.js",
-    "main": "build/main.js",
+    "licenseInformation": {
+      "license": "MIT",
+      "type": "free"
+    },
+    "platform": "Javascript/Node.js",    
     "icon": "evcc.png",
     "enabled": true,
     "extIcon": "https://raw.githubusercontent.com/Newan/ioBroker.evcc/main/admin/evcc.png",
@@ -135,6 +139,7 @@
     "mode": "daemon",
     "type": "energy",
     "compact": true,
+    "tier": 2,
     "connectionType": "local",
     "dataSource": "poll",
     "adminUI": {
@@ -143,7 +148,7 @@
     },
     "globalDependencies": [
       {
-        "admin": ">=6.0.0"
+        "admin": ">=6.7.14"
       }
     ],
     "dependencies": [
