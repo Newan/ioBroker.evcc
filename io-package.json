@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "evcc",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "news": {
+      "0.2.2": {
+        "en": "corr dissolve folders",
+        "de": "korr löst ordner",
+        "ru": "rr растворять папки",
+        "pt": "pastas de dissolver corr",
+        "nl": "corr oplossen van mappen",
+        "fr": "corr dissout les dossiers",
+        "it": "corr dissolvere le cartelle",
+        "es": "corr disuelve carpetas",
+        "pl": "foldery rozpuszczania corr",
+        "uk": "корр розвести папки",
+        "zh-cn": "corr 解散文件夹"
+      },
       "0.2.1": {
         "en": "consolidate off, min, pv, now buttons to select object\nupdate dependencies",
         "de": "konsolidieren, min, pv, jetzt tasten, um objekt auszuwählen\naktualisierung der abhängigkeiten",
@@ -80,19 +93,6 @@
         "pl": "naprawa minSoc & target Soc",
         "uk": "фіксувати для MinSoc & цілей Соц",
         "zh-cn": "fix 采矿和目标 Soc"
-      },
-      "0.0.7": {
-        "en": "Update for evcc 1.11.x\nBugfix #4, change SoC names",
-        "de": "Update für evcc 1.11.x\nBugfix #4, SoC-Namen ändern",
-        "ru": "Обновление для evcc 1.11.x\nBugfix #4, изменить имена SoC",
-        "pt": "Atualização para evcc 1.11.x\nBugfix #4, alterar nomes de SoC",
-        "nl": "Update voor evcc 1.11\nBugfix #4, verander SoC namen",
-        "fr": "Mise à jour pour evcc 1.11.x\nBugfix #4, modifier les noms SoC",
-        "it": "Aggiornamento per evcc 1.11.x\nBugfix #4, cambia i nomi SoC",
-        "es": "Actualización para evcc 1.11.x\nBugfix #4, cambiar nombres SoC",
-        "pl": "Data dostępu do 1.11.x\nBugfix #4 zmienia nazwę na SoC",
-        "uk": "Оновлення для evcc 1.11.x\nBugfix #4, змінити імена SoC",
-        "zh-cn": "最新资料\nBugfix #4, 改变SC名称"
       }
     },
     "titleLang": {

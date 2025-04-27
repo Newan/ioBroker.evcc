@@ -307,102 +307,93 @@ class Evcc extends utils.Adapter {
     }
 
     async setStatusEvcc(daten: any, knoten: string): Promise<void> {
-        //Dynamisch erstellen
+        for (const [lpEntry, lpData] of Object.entries(daten)) {
+            if (['result', 'vehicles', 'loadpoints'].includes(lpEntry)) {
+                continue;
+            }
+            if (lpData == null || JSON.stringify(lpData) === '{}' || JSON.stringify(lpData) === '[]') {
+                continue;
+            }
 
-        for (const lpEntry in daten) {
-            if (!daten.hasOwnProperty(lpEntry)) {
-                continue;
-            }
-            const lpData = daten[lpEntry];
-            if (JSON.stringify(lpData) === '{}' || JSON.stringify(lpData) === '[]') {
-                continue;
-            }
-            const lpType = typeof lpData; // get Type of Variable as String, like string/number/boolean
-            //TODO noch PV uns statístic ausführen
-            if (lpEntry == 'result' || lpEntry == 'vehicles' || lpEntry == 'loadpoints') {
-                continue;
-            }
-            //Update der Control Werte
-            if (lpEntry === 'bufferStartSoc') {
-                this.setState('control.bufferStartSoc', { val: lpData, ack: true });
-            } else if (lpEntry === 'prioritySoc') {
-                this.setState('control.prioritySoc', { val: lpData, ack: true });
-            } else if (lpEntry === 'bufferSoc') {
-                this.setState('control.bufferSoc', { val: lpData, ack: true });
-            }
-            let outData = lpData;
-            if (lpType === 'object' && lpData !== null) {
-                if (this.config.dissolveObjects) {
-                    const lpEntryFormatted = lpEntry.replace(/^./, char => char.toUpperCase());
-                    // @ts-ignore
-                    this.setObjectNotExists(`status.${lpEntryFormatted}`, {
-                        type: 'channel',
-                        common: {
-                            role: 'value',
-                            name: lpEntryFormatted,
-                        },
-                        native: {},
-                    });
-                    for (const lpEntry1 in outData) {
-                        const lpData1 = outData[lpEntry1];
-                        const lpType1 = typeof lpData1;
+            const lpType = typeof lpData;
+            const outData = lpData;
 
-                        if (lpType1 === 'object' && lpData1 !== null) {
-                            const lpEntryFormatted1 = isNaN(Number(lpEntry1))
-                                ? lpEntry1.replace(/^./, char => char.toUpperCase())
-                                : lpEntry1;
+            // Bestimmte Control-Werte direkt setzen
+            const controlMapping: { [key: string]: string } = {
+                bufferStartSoc: 'control.bufferStartSoc',
+                prioritySoc: 'control.prioritySoc',
+                bufferSoc: 'control.bufferSoc',
+            };
+
+            if (controlMapping[lpEntry]) {
+                // @ts-ignore
+                this.setState(controlMapping[lpEntry],  { val: lpData, ack: true });
+                continue;
+            }
+
+            if (lpType === 'object' && this.config.dissolveObjects) {
+                const lpEntryFormatted = this.capitalizeFirst(lpEntry);
+                await this.setObjectNotExists(`status.${lpEntryFormatted}`, {
+                    type: 'channel',
+                    common: { role: 'value', name: lpEntryFormatted },
+                    native: {},
+                });
+
+                for (const [lpEntry1, lpData1] of Object.entries(lpData)) {
+                    if (lpData1 == undefined) {
+                        continue;
+                    }
+
+                    const pfad = `status.${lpEntryFormatted}`;
+                    const lpEntryFormatted1 = isNaN(Number(lpEntry1)) ? this.capitalizeFirst(lpEntry1) : lpEntry1;
+                    const lpType1 = typeof lpData1;
+
+                    if (lpType1 === 'object' && lpData1 !== null) {
+                        await this.setObjectNotExists(`${pfad}.${lpEntryFormatted1}`, {
+                            type: 'channel',
+                            common: { role: 'value', name: lpEntryFormatted1 },
+                            native: {},
+                        });
+
+                        for (const [dataPoint, keyData] of Object.entries(lpData1)) {
+                            const keyType = typeof keyData;
                             // @ts-ignore
-                            this.setObjectNotExists(`status.${lpEntryFormatted}.${lpEntryFormatted1}`, {
-                                type: 'channel',
-                                common: {
-                                    role: 'value',
-                                    name: lpEntryFormatted1,
-                                },
-                                native: {},
-                            });
-                            const pfad = `status.${lpEntryFormatted}.${lpEntryFormatted1}`;
-                            for (const dataPoint in lpData1) {
-                                const keyData = lpData1[dataPoint];
-                                const keyType = typeof keyData;
-
-                                // @ts-ignore
-                                this.setObjectNotExists(`${pfad}.${dataPoint}`, {
-                                    type: 'state',
-                                    common: {
-                                        role: 'value',
-                                        name: dataPoint,
-                                        type: keyType,
-                                        read: true,
-                                        write: false,
-                                    },
-                                    native: {},
-                                });
-                                this.setState(`${pfad}.${dataPoint}`, keyData, true);
-                            }
-                        } else {
-                            const pfad = `status.${lpEntryFormatted}`;
-                            // @ts-ignore
-                            this.setObjectNotExists(`${pfad}.${lpEntry1}`, {
+                            await this.setObjectNotExists(`${pfad}.${lpEntryFormatted1}.${dataPoint}`, {
                                 type: 'state',
                                 common: {
                                     role: 'value',
-                                    name: lpEntry1,
-                                    type: lpType1,
+                                    name: dataPoint,
+                                    type: keyType,
                                     read: true,
                                     write: false,
                                 },
                                 native: {},
                             });
-                            this.setState(`${pfad}.${lpEntry1}`, lpData1, true);
+                            // @ts-ignore
+                            this.setState(`${pfad}.${lpEntryFormatted1}.${dataPoint}`, keyType === 'object' ? JSON.stringify(keyData) : keyData, true);
                         }
+                    } else {
+                        // @ts-ignore
+                        await this.setObjectNotExists(`${pfad}.${lpEntry1}`, {
+                            type: 'state',
+                            common: {
+                                role: 'value',
+                                name: lpEntry1,
+                                type: lpType1,
+                                read: true,
+                                write: false,
+                            },
+                            native: {},
+                        });
+                        this.setState(`${pfad}.${lpEntry1}`, lpData1, true);
                     }
                 }
-                outData = JSON.stringify(lpData);
+                continue;
             }
 
-            if (knoten !== '' && this.config.dissolveObjects) {
+            if (knoten && this.config.dissolveObjects) {
                 // @ts-ignore
-                this.setObjectNotExists(`status.${lpEntry}`, {
+                await this.setObjectNotExists(`status.${lpEntry}`, {
                     type: 'state',
                     common: {
                         role: 'value',
@@ -415,14 +406,11 @@ class Evcc extends utils.Adapter {
                 });
 
                 if (lpType === 'object' && lpData !== null) {
-                    if (this.config.dissolveObjects) {
-                        await this.setStatusEvcc(lpData, lpEntry);
-                    }
-                    outData = JSON.stringify(lpData);
+                    await this.setStatusEvcc(lpData, lpEntry);
                 }
             } else {
                 // @ts-ignore
-                this.setObjectNotExists(`status.${lpEntry}`, {
+                await this.setObjectNotExists(`status.${lpEntry}`, {
                     type: 'state',
                     common: {
                         role: 'value',
@@ -433,10 +421,16 @@ class Evcc extends utils.Adapter {
                     },
                     native: {},
                 });
-                this.setState(`status.${lpEntry}`, outData, true);
+                // @ts-ignore
+                this.setState(`status.${lpEntry}`, lpType === 'object' ? JSON.stringify(lpData) : lpData, true);
             }
         }
     }
+
+    capitalizeFirst(text: string): string {
+        return text.charAt(0).toUpperCase() + text.slice(1);
+    }
+
     /**
      * Hole Daten von und für Vehicle
      *
