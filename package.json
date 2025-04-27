@@ -2,6 +2,7 @@
   "name": "iobroker.evcc",
   "version": "0.2.0",
   "description": "Controll evcc over rest api",
+  "main": "main.js",
   "author": {
     "name": "Newan",
     "email": "info@newan.de"
@@ -9,7 +10,9 @@
   "homepage": "https://github.com/Newan/ioBroker.evcc",
   "license": "MIT",
   "keywords": [
-    "evcc pv charge"
+    "evcc pv charge",
+    "evcc",
+    "ioBroker"
   ],
   "repository": {
     "type": "git",
