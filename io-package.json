@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "evcc",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "news": {
+      "0.2.1": {
+        "en": "consolidate off, min, pv, now buttons to select object\nupdate dependencies",
+        "de": "konsolidieren, min, pv, jetzt tasten, um objekt auszuwählen\naktualisierung der abhängigkeiten",
+        "ru": "консолидировать, мин, пв, теперь кнопки для выбора объекта\nобновление зависимостей",
+        "pt": "consolidar, min, pv, agora botões para selecionar objeto\ndependências",
+        "nl": "consolideren, min, pv, nu knoppen om object te selecteren\nafhankelijkheden bijwerken",
+        "fr": "consolidation, min, pv, maintenant boutons pour sélectionner l'objet\nmettre à jour les dépendances",
+        "it": "consolidare, min, pv, ora pulsanti per selezionare l'oggetto\naggiornamento dipendenze",
+        "es": "consolidar, min, pv, ahora botones para seleccionar objeto\ndependencias de actualización",
+        "pl": "konsolidacja, min, pv, teraz przyciski do wyboru obiektu\naktualizacji zależności",
+        "uk": "з'єднання, хв, pv, тепер кнопки вибрати об'єкт\nоновлення залежності",
+        "zh-cn": "合并, min, pv, 现在按钮来选择对象\n更新依赖关系"
+      },
       "0.2.0": {
         "en": "generate status folder",
         "de": "statusordner erstellen",
@@ -80,18 +93,6 @@
         "pl": "Data dostępu do 1.11.x\nBugfix #4 zmienia nazwę na SoC",
         "uk": "Оновлення для evcc 1.11.x\nBugfix #4, змінити імена SoC",
         "zh-cn": "最新资料\nBugfix #4, 改变SC名称"
-      },
-      "0.0.5": {
-        "en": "update for latest-repository",
-        "de": "Update für latest-Repository",
-        "ru": "обновление для последнего репозитория",
-        "pt": "atualização para o repositório mais recente",
-        "nl": "update voor laatste-repository",
-        "fr": "mise à jour pour le dernier référentiel",
-        "it": "aggiornamento per l'ultimo repository",
-        "es": "actualización para el último repositorio",
-        "pl": "aktualizacja do najnowszego repozytorium",
-        "zh-cn": "更新最新存储库"
       }
     },
     "titleLang": {
@@ -130,7 +131,7 @@
       "license": "MIT",
       "type": "free"
     },
-    "platform": "Javascript/Node.js",    
+    "platform": "Javascript/Node.js",
     "icon": "evcc.png",
     "enabled": true,
     "extIcon": "https://raw.githubusercontent.com/Newan/ioBroker.evcc/main/admin/evcc.png",

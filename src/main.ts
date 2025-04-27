@@ -107,6 +107,27 @@ class Evcc extends utils.Adapter {
                         this.log.info(`Start evcc pv only charging on loadpointindex: ${idProperty[3]}`);
                         this.setEvccStartPV(idProperty[3]);
                         break;
+                    case 'pvControl':
+                        switch (Number(state.val)) {
+                            case 0:
+                                this.log.info(`Stop evcc charging on loadpointindex: ${  idProperty[3]}`);
+                                this.setEvccStop(idProperty[3]);
+                                break;
+                            case 1:
+                                this.log.info(`Start evcc pv only charging on loadpointindex: ${  idProperty[3]}`);
+                                this.setEvccStartPV(idProperty[3]);
+                                break;
+                            case 2:
+                                this.log.info(`Start evcc minimal charging on loadpointindex: ${  idProperty[3]}`);
+                                this.setEvccStartMin(idProperty[3]);
+                                break;
+                            case 3:
+                                this.log.info(`Start evcc charging on loadpointindex: ${  idProperty[3]}`);
+                                this.setEvccStartNow(idProperty[3]);
+                                break;
+                        }
+
+                        break;
                     case 'minCurrent':
                         this.log.info(`Set minCurrent on loadpointindex: ${idProperty[3]}`);
                         this.setEvccMinCurrent(idProperty[3], state.val);
@@ -696,6 +717,26 @@ class Evcc extends utils.Adapter {
             native: {},
         });
         this.subscribeStates(`loadpoint.${index}.control.pv`);
+
+        await this.setObjectNotExistsAsync(`loadpoint.${  index  }.control.pvControl`, {
+            type: 'state',
+            common: {
+                name: 'control charging',
+                type: 'number',
+                role: 'level',
+                read: true,
+                write: true,
+                def: 0,
+                states: {
+                    0: 'off',
+                    1: 'pv',
+                    2: 'min',
+                    3: 'now'
+                }
+            },
+            native: {},
+        });
+        this.subscribeStates(`loadpoint.${  index  }.control.pvControl`);
 
         await this.setObjectNotExistsAsync(`loadpoint.${index}.control.maxCurrent`, {
             type: 'state',
