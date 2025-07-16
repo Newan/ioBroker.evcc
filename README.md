@@ -29,7 +29,7 @@ Forum: https://forum.iobroker.net/topic/49165/neuer-adapter-iobroker-evcc
 * (arteck) update dependencies
 
 ### 0.2.0 (2025-03-10)
-* (arteck) generate status folder
+* (arteck) generate status folder, Status folder must be deleted manually
 
 ### 0.1.1 (2024-01-07)
 * (Newan) add batteriemangement
