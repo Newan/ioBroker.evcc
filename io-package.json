@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "evcc",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "news": {
+      "0.2.3": {
+        "en": "simplify json response by removing result wrapper, see https://github.com/evcc-io/evcc/pull/22299",
+        "de": "vereinfachung der json-reaktion durch entfernen der ergebnis-wrapper, siehe http://github.com/evcc-io/evcc/pull/22299",
+        "ru": "упростите реакцию json, удалив обертку результата, см. https://github.com/evcc-io/evcc/pull/22299",
+        "pt": "simplifique a resposta json removendo o invólucro do resultado, veja https://github.com/evcc-io/evcc/pull/22299",
+        "nl": "json response vereenvoudigen door het verwijderen van resultaat wrapper, zie https://github.com/evcc-io/evcc/pull/22299",
+        "fr": "simplifier la réponse de json en supprimant l'emballage de résultat, voir https://github.com/evcc-io/evcc/pull/22299",
+        "it": "semplificare la risposta json rimuovendo l'involucro dei risultati, vedere https://github.com/evcc-io/evcc/pull/22299",
+        "es": "simplificar la respuesta json mediante la eliminación de la envoltura del resultado, ver https://github.com/evcc-io/evcc/pull/22299",
+        "pl": "uprościć odpowiedź json poprzez usunięcie owijania wyników, patrz https: / / github.com / evcc- io / evcc / pull / 22299",
+        "uk": "спрощує json відповідь шляхом видалення результату обгортання, див. https://github.com/evcc-io/evcc/pull/22299",
+        "zh-cn": "通过删除结果包装来简化 json 响应,参见 https://github.com/evcc-io/evcc/pul/22299 互联网档案馆的存檔,存档日期2013-09-02"
+      },
       "0.2.2": {
         "en": "corr dissolve folders",
         "de": "korr löst ordner",
@@ -80,19 +93,6 @@
         "pl": "generują dynamiczne obiekty\ntypo",
         "uk": "генерувати динамічні об'єкти\nтипофіксатори",
         "zh-cn": "产生动态目标\n类型"
-      },
-      "0.0.8": {
-        "en": "fix for minSoc & targetSoc",
-        "de": "fix für minSoc & Ziel Soja",
-        "ru": "исправить для minSoc & target Соц",
-        "pt": "correção para minSoc & target Soc",
-        "nl": "vertaling: Socquet",
-        "fr": "fix pour minSoc & cible Soc",
-        "it": "correzione per minSoc & target Soc",
-        "es": "fijado para minSoc & target Soc",
-        "pl": "naprawa minSoc & target Soc",
-        "uk": "фіксувати для MinSoc & цілей Соц",
-        "zh-cn": "fix 采矿和目标 Soc"
       }
     },
     "titleLang": {

@@ -52,7 +52,7 @@ class Evcc extends utils.Adapter {
         }
 
         //legen - pürfen controls
-        this.createEvccControl();
+        await this.createEvccControl();
 
         //holen für den Start einmal alle Daten
         this.getEvccData();
@@ -171,7 +171,7 @@ class Evcc extends utils.Adapter {
                                 switch (idProperty[5]) {
                                     case 'active':
                                         this.log.info(`Set plan.active on vehicle: ${idProperty[3]} to ${state.val}`);
-                                        this.setVehiclePlan(idProperty[3], Boolean(state.val), 0);
+                                        this.setVehiclePlan(idProperty[3], Boolean(state.val));
                                         break;
                                 }
                                 this.setVehicleLimitSoc(idProperty[3], Number(state.val));
@@ -216,10 +216,17 @@ class Evcc extends utils.Adapter {
                     this.log.debug(`Get-Data from evcc:${JSON.stringify(response.data)}`);
 
                     //Global status Items - ohne loadpoints - ohne vehicle
-                    this.setStatusEvcc(response.data.result, '');
+                    let respData = response.data;
+
+                    if (response.data.hasOwnProperty('result')) {  // https://github.com/evcc-io/evcc/pull/22299
+                        respData = response.data.result;
+                    }
+
+
+                    this.setStatusEvcc(respData, '');
 
                     //Laden jeden Ladepunkt einzeln
-                    const tmpListLoadpoints: Loadpoint[] = response.data.result.loadpoints;
+                    const tmpListLoadpoints: Loadpoint[] = respData.loadpoints;
                     tmpListLoadpoints.forEach(async (loadpoint, index) => {
                         await this.setLoadPointdata(loadpoint, index);
                     });
@@ -233,8 +240,8 @@ class Evcc extends utils.Adapter {
                     tmpListVehicles = response.data.result.vehicles;
                 }*/
 
-                    for (const vehicleKey in response.data.result.vehicles) {
-                        const vehicle = response.data.result.vehicles[vehicleKey];
+                    for (const vehicleKey in respData.vehicles) {
+                        const vehicle = respData.vehicles[vehicleKey];
                         await this.setVehicleData(vehicleKey, vehicle);
                     }
 
@@ -316,7 +323,7 @@ class Evcc extends utils.Adapter {
             }
 
             const lpType = typeof lpData;
-            const outData = lpData;
+            //   const outData = lpData;
 
             // Bestimmte Control-Werte direkt setzen
             const controlMapping: { [key: string]: string } = {
@@ -348,7 +355,7 @@ class Evcc extends utils.Adapter {
                     const lpEntryFormatted1 = isNaN(Number(lpEntry1)) ? this.capitalizeFirst(lpEntry1) : lpEntry1;
                     const lpType1 = typeof lpData1;
 
-                    if (lpType1 === 'object' && lpData1 !== null) {
+                    if (lpType1 == 'object' && lpData1 !== null) {
                         await this.setObjectNotExists(`${pfad}.${lpEntryFormatted1}`, {
                             type: 'channel',
                             common: { role: 'value', name: lpEntryFormatted1 },
@@ -405,7 +412,7 @@ class Evcc extends utils.Adapter {
                     native: {},
                 });
 
-                if (lpType === 'object' && lpData !== null) {
+                if (lpType == 'object' && lpData !== null) {
                     await this.setStatusEvcc(lpData, lpEntry);
                 }
             } else {
@@ -874,30 +881,6 @@ class Evcc extends utils.Adapter {
             });
     }
 
-    setEvccTargetSoc(index: string, value: ioBroker.StateValue): void {
-        this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/target/soc/${value}`);
-        axios
-            .post(`http://${this.ip}/api/loadpoints/${index}/target/soc/${value}`, { timeout: this.timeout })
-            .then(() => {
-                this.log.info('Evcc update successful');
-            })
-            .catch(error => {
-                this.log.error(`5 ${error.message}`);
-            });
-    }
-
-    setEvccMinSoc(index: string, value: ioBroker.StateValue): void {
-        this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/minsoc/${value}`);
-        axios
-            .post(`http://${this.ip}/api/loadpoints/${index}/minsoc/${value}`, { timeout: this.timeout })
-            .then(() => {
-                this.log.info('Evcc update successful');
-            })
-            .catch(error => {
-                this.log.error(`6 ${error.message}`);
-            });
-    }
-
     setEvccMinCurrent(index: string, value: ioBroker.StateValue): void {
         this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/mincurrent/${value}`);
         axios
@@ -962,18 +945,6 @@ class Evcc extends utils.Adapter {
             });
     }
 
-    setEvccSetTargetTime(index: string, value: ioBroker.StateValue): void {
-        this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/target/time/${value}`);
-        axios
-            .post(`http://${this.ip}/api/loadpoints/${index}/target/time/${value}`, { timeout: this.timeout })
-            .then(() => {
-                this.log.info('Evcc update successful');
-            })
-            .catch(error => {
-                this.log.error(`12 ${error.message}`);
-            });
-    }
-
     setEvccLimitSoc(index: string, value: ioBroker.StateValue): void {
         this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/limitsoc/${value}`);
         axios
@@ -1010,17 +981,6 @@ class Evcc extends utils.Adapter {
         }
     }
 
-    setEvccDeleteTargetTime(index: string): void {
-        this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/target/time`);
-        axios
-            .delete(`http://${this.ip}/api/loadpoints/${index}/target/time`, { timeout: this.timeout })
-            .then(() => {
-                this.log.info('Evcc update successful');
-            })
-            .catch(error => {
-                this.log.error(`13 ${error.message}`);
-            });
-    }
 
     setEvccBufferSoc(bufferSoc: number): void {
         this.log.debug(`call: ` + `http://${this.ip}/api/buffersoc/${bufferSoc}`);
@@ -1081,7 +1041,7 @@ class Evcc extends utils.Adapter {
             });
     }
 
-    setVehiclePlan(vehicleID: string, active: boolean, soc: number): void {
+    setVehiclePlan(vehicleID: string, active: boolean): void {
         if (active) {
             const currentDate = new Date();
             // Add one day to the current date
@@ -1116,6 +1076,53 @@ class Evcc extends utils.Adapter {
                     this.log.error(`Error deactive plan: ${error.message}`);
                 });
         }
+    }
+
+    setEvccTargetSoc(index: string, value: ioBroker.StateValue): void {
+        this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/target/soc/${value}`);
+        axios
+            .post(`http://${this.ip}/api/loadpoints/${index}/target/soc/${value}`, { timeout: this.timeout })
+            .then(() => {
+                this.log.info('Evcc update successful');
+            })
+            .catch(error => {
+                this.log.error(`5 ${error.message}`);
+            });
+    }
+
+    setEvccMinSoc(index: string, value: ioBroker.StateValue): void {
+        this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/minsoc/${value}`);
+        axios
+            .post(`http://${this.ip}/api/loadpoints/${index}/minsoc/${value}`, { timeout: this.timeout })
+            .then(() => {
+                this.log.info('Evcc update successful');
+            })
+            .catch(error => {
+                this.log.error(`6 ${error.message}`);
+            });
+    }
+
+    setEvccSetTargetTime(index: string, value: ioBroker.StateValue): void {
+        this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/target/time/${value}`);
+        axios
+            .post(`http://${this.ip}/api/loadpoints/${index}/target/time/${value}`, { timeout: this.timeout })
+            .then(() => {
+                this.log.info('Evcc update successful');
+            })
+            .catch(error => {
+                this.log.error(`12 ${error.message}`);
+            });
+    }
+    setEvccDeleteTargetTime(index: string): void {
+        this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/target/time`);
+        axios
+            .delete(`http://${this.ip}/api/loadpoints/${index}/target/time`, { timeout: this.timeout })
+            .then(() => {
+                this.log.info('Evcc update successful');
+            })
+            .catch(error => {
+                this.log.error(`13 ${error.message}`);
+            });
     }
 }
 
