@@ -104,11 +104,11 @@ jobs:
       # How to release packages to npm depends on the package type.
       # Choose one of these possibilities and or comment out the others:
       # a) For normal packages (no monorepo):
-      - name: Publish package to npm
-        run: |
-          npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
-          npm whoami
-          npm publish
+  #    - name: Publish package to npm
+  #      run: |
+  #        npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
+  #        npm whoami
+  #        npm publish
       # b) For monorepos managed with lerna (requires lerna to be installed globally)
       #- name: Publish packages to npm
       #  run: |
@@ -122,14 +122,14 @@ jobs:
       #    yarn npm whoami
       #    yarn workspaces foreach -vti --no-private npm publish --tolerate-republish
 
-      - name: Create Github Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release v${{ steps.extract_release.outputs.VERSION }}
-          draft: false
-          # Prerelease versions create prereleases on Github
-          prerelease: ${{ contains(steps.extract_release.outputs.VERSION, '-') }}
-          body: ${{ steps.extract_release.outputs.BODY }}
+  #    - name: Create Github Release
+  #      uses: actions/create-release@v1
+  #      env:
+  #        GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+  #      with:
+  #        tag_name: ${{ github.ref }}
+  #        release_name: Release v${{ steps.extract_release.outputs.VERSION }}
+  #        draft: false
+  #        # Prerelease versions create prereleases on Github
+  #        prerelease: ${{ contains(steps.extract_release.outputs.VERSION, '-') }}
+  #        body: ${{ steps.extract_release.outputs.BODY }}
