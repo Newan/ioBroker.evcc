@@ -1,7 +1,7 @@
 {
     "general": "Allgemein",
     "polltime": "Intervall",
-    "polltime_help": "Intervall in Sekunden, um nach evcc zu suchen",
+    "polltime_help": "evcc Updateintervall in Sekunden",
     "ip": "IP",
     "ip_help": "IP-Adresse zu Ihrer evcc-Installation",
     "port": "Port",
