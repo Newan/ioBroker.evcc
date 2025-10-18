@@ -190,6 +190,10 @@ class Evcc extends utils.Adapter {
                                         this.log.info('Set prioritySoc on evcc');
                                         this.setEvccPrioritySoc(Number(state.val));
                                         break;
+                                    case 'smartcostlimit':
+                                        this.log.info('Set smartcostlimit on evcc');
+                                        this.setEvccSmartcostlimit(Number(state.val));
+                                        break;
                                     default:
                                         this.log.debug(JSON.stringify(idProperty));
                                         this.log.warn(
@@ -282,6 +286,20 @@ class Evcc extends utils.Adapter {
         });
         this.subscribeStates('control.bufferSoc');
 
+         await this.setObjectNotExistsAsync('control.smartcostlimit', {
+            type: 'state',
+            common: {
+                name: 'smartcostlimit',
+                type: 'number',
+                role: 'value',
+                read: true,
+                write: true,
+                unit: '€',
+            },
+            native: {},
+        });
+        this.subscribeStates('control.smartcostlimit');
+
         //http://192.168.178.10:7070/api/prioritysoc/50
         await this.setObjectNotExistsAsync('control.prioritySoc', {
             type: 'state',
@@ -330,6 +348,7 @@ class Evcc extends utils.Adapter {
                 bufferStartSoc: 'control.bufferStartSoc',
                 prioritySoc: 'control.prioritySoc',
                 bufferSoc: 'control.bufferSoc',
+                smartcostlimit: 'control.smartcostlimit',
             };
 
             if (controlMapping[lpEntry]) {
@@ -956,6 +975,19 @@ class Evcc extends utils.Adapter {
                 this.log.error(`12 ${error.message}`);
             });
     }
+
+    setEvccSmartcostlimit(index: string, value: ioBroker.StateValue): void {
+        this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/smartcostlimit/${value}`);
+        axios
+            .post(`http://${this.ip}/api/loadpoints/${index}/smartcostlimit/${value}`, { timeout: this.timeout })
+            .then(() => {
+                this.log.info('Evcc update successful');
+            })
+            .catch(error => {
+                this.log.error(`12 ${error.message}`);
+            });
+    }
+    
     setEvccVehicle(index: string, value: ioBroker.StateValue): void {
         //Wenn der String leer ist, wird es das GAstauto und wir müssen löschen
         if (value == '') {
