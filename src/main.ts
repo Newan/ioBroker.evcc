@@ -192,7 +192,7 @@ class Evcc extends utils.Adapter {
                                         break;
                                     case 'smartcostlimit':
                                         this.log.info('Set smartcostlimit on evcc');
-                                        this.setEvccSmartcostlimit(Number(state.val));
+                                        this.setEvccSmartcostlimit(idProperty[3], Number(state.val));
                                         break;
                                     default:
                                         this.log.debug(JSON.stringify(idProperty));
@@ -286,7 +286,7 @@ class Evcc extends utils.Adapter {
         });
         this.subscribeStates('control.bufferSoc');
 
-         await this.setObjectNotExistsAsync('control.smartcostlimit', {
+        await this.setObjectNotExistsAsync('control.smartcostlimit', {
             type: 'state',
             common: {
                 name: 'smartcostlimit',
@@ -987,7 +987,7 @@ class Evcc extends utils.Adapter {
                 this.log.error(`12 ${error.message}`);
             });
     }
-    
+
     setEvccVehicle(index: string, value: ioBroker.StateValue): void {
         //Wenn der String leer ist, wird es das GAstauto und wir müssen löschen
         if (value == '') {
