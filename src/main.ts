@@ -85,129 +85,95 @@ class Evcc extends utils.Adapter {
      * @param state
      */
     private onStateChange(id: string, state: ioBroker.State | null | undefined): void {
-        if (state) {
-            // The state was changed, if true it is from this adapter
-            if (!state.ack) {
-                this.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
-                const idProperty = id.split('.');
-                switch (idProperty[5]) {
-                    case 'off':
-                        this.log.info(`Stop evcc charging on loadpointindex: ${idProperty[3]}`);
-                        this.setEvccStop(idProperty[3]);
-                        break;
-                    case 'now':
-                        this.log.info(`Start evcc charging on loadpointindex: ${idProperty[3]}`);
-                        this.setEvccStartNow(idProperty[3]);
-                        break;
-                    case 'min':
-                        this.log.info(`Start evcc minimal charging on loadpointindex: ${idProperty[3]}`);
-                        this.setEvccStartMin(idProperty[3]);
-                        break;
-                    case 'pv':
-                        this.log.info(`Start evcc pv only charging on loadpointindex: ${idProperty[3]}`);
-                        this.setEvccStartPV(idProperty[3]);
-                        break;
-                    case 'pvControl':
-                        switch (Number(state.val)) {
-                            case 0:
-                                this.log.info(`Stop evcc charging on loadpointindex: ${  idProperty[3]}`);
-                                this.setEvccStop(idProperty[3]);
-                                break;
-                            case 1:
-                                this.log.info(`Start evcc pv only charging on loadpointindex: ${  idProperty[3]}`);
-                                this.setEvccStartPV(idProperty[3]);
-                                break;
-                            case 2:
-                                this.log.info(`Start evcc minimal charging on loadpointindex: ${  idProperty[3]}`);
-                                this.setEvccStartMin(idProperty[3]);
-                                break;
-                            case 3:
-                                this.log.info(`Start evcc charging on loadpointindex: ${  idProperty[3]}`);
-                                this.setEvccStartNow(idProperty[3]);
-                                break;
-                        }
-
-                        break;
-                    case 'minCurrent':
-                        this.log.info(`Set minCurrent on loadpointindex: ${idProperty[3]}`);
-                        this.setEvccMinCurrent(idProperty[3], state.val);
-                        break;
-                    case 'maxCurrent':
-                        this.log.info(`Set maxCurrent on loadpointindex: ${idProperty[3]}`);
-                        this.setEvccMaxCurrent(idProperty[3], state.val);
-                        break;
-                    case 'phasesConfigured':
-                        this.log.info(`Set phasesConfigured on loadpointindex: ${idProperty[3]}`);
-                        this.setEvccPhases(idProperty[3], state.val);
-                        break;
-                    case 'disable_threshold':
-                        this.log.info(`Set disbale threshold on loadpointindex: ${idProperty[3]}`);
-                        this.setEvccDisableThreshold(idProperty[3], state.val);
-                        break;
-                    case 'enable_threshold':
-                        this.log.info(`Set enable threshold on loadpointindex: ${idProperty[3]}`);
-                        this.setEvccEnableThreshold(idProperty[3], state.val);
-                        break;
-                    case 'limitSoc':
-                        this.log.info(`Set limitSoc on loadpointindex: ${idProperty[3]}`);
-                        this.setEvccLimitSoc(idProperty[3], Number(state.val));
-                        break;
-                    case 'vehicleName':
-                        this.log.info(`Set vehicleName on loadpointindex: ${idProperty[3]}`);
-                        this.setEvccVehicle(idProperty[3], state.val);
-                        break;
-                    default:
-                        switch (idProperty[4]) {
-                            case 'minSoc':
-                                this.log.info(`Set minSoc on vehicle: ${idProperty[3]}`);
-                                this.setVehicleMinSoc(idProperty[3], Number(state.val));
-                                break;
-                            case 'limitSoc':
-                                this.log.info(`Set limitSoc on vehicle: ${idProperty[3]}`);
-                                this.setVehicleLimitSoc(idProperty[3], Number(state.val));
-                                break;
-                            case 'plan':
-                                this.log.debug(`Set plan on vehicle: ${idProperty[3]}`);
-                                switch (idProperty[5]) {
-                                    case 'active':
-                                        this.log.info(`Set plan.active on vehicle: ${idProperty[3]} to ${state.val}`);
-                                        this.setVehiclePlan(idProperty[3], Boolean(state.val));
-                                        break;
-                                }
-                                this.setVehicleLimitSoc(idProperty[3], Number(state.val));
-                                break;
-                            default:
-                                switch (idProperty[3]) {
-                                    case 'bufferSoc':
-                                        this.log.info('Set bufferSoc on evcc');
-                                        this.setEvccBufferSoc(Number(state.val));
-                                        break;
-                                    case 'bufferStartSoc':
-                                        this.log.info('Set bufferStartSoc on evcc');
-                                        this.setEvccBufferStartSoc(Number(state.val));
-                                        break;
-                                    case 'prioritySoc':
-                                        this.log.info('Set prioritySoc on evcc');
-                                        this.setEvccPrioritySoc(Number(state.val));
-                                        break;
-                                    case 'smartcostlimit':
-                                        this.log.info('Set smartcostlimit on evcc');
-                                        this.setEvccSmartcostlimit(idProperty[3], Number(state.val));
-                                        break;
-                                    default:
-                                        this.log.debug(JSON.stringify(idProperty));
-                                        this.log.warn(
-                                            `Event with state ${id} changed: ${state.val} (ack = ${state.ack}) not found`,
-                                        );
-                                }
-                        }
-                }
-            }
-        } else {
-            // The state was deleted
+        if (!state) {
             this.log.info(`state ${id} deleted`);
+            return;
         }
+
+        if (state.ack) {
+            return;
+        } // nur auf manuelle Änderungen reagieren
+
+        const idParts = id.split('.');
+        const [i0, i1, i2, index, group, action] = idParts;
+        const val = state.val;
+
+        this.log.info(`state ${id} changed: ${val} (ack = ${state.ack})`);
+
+        // --- Helper: Logging + Funktionsaufruf ---
+        const doAction = (
+            msg: string,
+            fn: (...args: any[]) => void,
+            ...args: any[]
+        ): void => {
+            this.log.info(`${msg} on loadpointindex: ${index}`);
+            fn.apply(this, args);
+        };
+
+        // --- Direktes Mapping für einfache Fälle ---
+        const actionMap: Record<string, () => void> = {
+            off:        () => doAction('Stop evcc charging', this.setEvccStop, index),
+            now:        () => doAction('Start evcc charging', this.setEvccStartNow, index),
+            min:        () => doAction('Start evcc minimal charging', this.setEvccStartMin, index),
+            pv:         () => doAction('Start evcc pv only charging', this.setEvccStartPV, index),
+            minCurrent: () => doAction('Set minCurrent', this.setEvccMinCurrent, index, val),
+            maxCurrent: () => doAction('Set maxCurrent', this.setEvccMaxCurrent, index, val),
+            phasesConfigured: () => doAction('Set phasesConfigured', this.setEvccPhases, index, val),
+            disable_threshold: () => doAction('Set disable threshold', this.setEvccDisableThreshold, index, val),
+            enable_threshold:  () => doAction('Set enable threshold', this.setEvccEnableThreshold, index, val),
+            limitSoc:    () => doAction('Set limitSoc', this.setEvccLimitSoc, index, Number(val)),
+            vehicleName: () => doAction('Set vehicleName', this.setEvccVehicle, index, val),
+            smartCostLimit: () => doAction('Set smartCostLimit', this.setEvccsmartCostLimitLoadpoint, index, val),
+        };
+
+        // --- pvControl separat behandeln ---
+        if (action === 'pvControl') {
+            const pvMap: Record<number, () => void> = {
+                0: () => doAction('Stop evcc charging', this.setEvccStop, index),
+                1: () => doAction('Start evcc pv only charging', this.setEvccStartPV, index),
+                2: () => doAction('Start evcc minimal charging', this.setEvccStartMin, index),
+                3: () => doAction('Start evcc charging', this.setEvccStartNow, index),
+            };
+            return pvMap[Number(val)]?.();
+        }
+
+        // --- Wenn direkte Aktion existiert ---
+        if (actionMap[action]) {
+            return actionMap[action]();
+        }
+
+        // --- Fahrzeug-bezogene Gruppen ---
+        if (group === 'vehicle') {
+            const vehicleMap: Record<string, () => void> = {
+                minSoc:  () => this.setVehicleMinSoc(index, Number(val)),
+                limitSoc: () => this.setVehicleLimitSoc(index, Number(val)),
+                plan: () => {
+                    if (action === 'active') {
+                        this.log.info(`Set plan.active on vehicle: ${index} to ${val}`);
+                        this.setVehiclePlan(index, Boolean(val));
+                    }
+                },
+            };
+            return vehicleMap[action]?.();
+        }
+
+        // --- EVCC-Root-Werte ---
+        const evccRootMap: Record<string, () => void> = {
+            bufferSoc:        () => this.setEvccBufferSoc(Number(val)),
+            bufferStartSoc:   () => this.setEvccBufferStartSoc(Number(val)),
+            prioritySoc:      () => this.setEvccPrioritySoc(Number(val)),
+            smartCostLimit:   () => this.setEvccsmartCostLimit(Number(val)),
+        };
+
+        if (evccRootMap[index]) {
+            return evccRootMap[index]();
+        }
+
+        // --- Fallback ---
+        this.log.debug(JSON.stringify(idParts));
+        this.log.warn(`Unhandled state change: ${id} -> ${val}`);
     }
+
 
     /**
      * Hole Daten vom EVCC
@@ -286,19 +252,20 @@ class Evcc extends utils.Adapter {
         });
         this.subscribeStates('control.bufferSoc');
 
-        await this.setObjectNotExistsAsync('control.smartcostlimit', {
+        await this.setObjectNotExistsAsync('control.smartCostLimit', {
             type: 'state',
             common: {
-                name: 'smartcostlimit',
+                name: 'smartCostLimit 0 = delete',
                 type: 'number',
                 role: 'value',
                 read: true,
                 write: true,
+                def: 0,
                 unit: '€',
             },
             native: {},
         });
-        this.subscribeStates('control.smartcostlimit');
+        this.subscribeStates('control.smartCostLimit');
 
         //http://192.168.178.10:7070/api/prioritysoc/50
         await this.setObjectNotExistsAsync('control.prioritySoc', {
@@ -348,7 +315,7 @@ class Evcc extends utils.Adapter {
                 bufferStartSoc: 'control.bufferStartSoc',
                 prioritySoc: 'control.prioritySoc',
                 bufferSoc: 'control.bufferSoc',
-                smartcostlimit: 'control.smartcostlimit',
+                smartCostLimit: 'control.smartCostLimit',
             };
 
             if (controlMapping[lpEntry]) {
@@ -608,7 +575,17 @@ class Evcc extends utils.Adapter {
             val: loadpoint.phasesConfigured,
             ack: true,
         });
-        await this.setStateAsync(`loadpoint.${index}.control.limitSoc`, { val: loadpoint.limitSoc, ack: true });
+
+        await this.setStateAsync(`loadpoint.${index}.control.smartCostLimit`, {
+            val: loadpoint.smartCostLimit,
+            ack: true,
+        });
+
+        await this.setStateAsync(`loadpoint.${index}.control.limitSoc`, {
+            val: loadpoint.limitSoc,
+            ack: true
+        });
+
         await this.setStateAsync(`loadpoint.${index}.control.vehicleName`, {
             val: loadpoint.vehicleName,
             ack: true,
@@ -797,6 +774,22 @@ class Evcc extends utils.Adapter {
         });
         this.subscribeStates(`loadpoint.${index}.control.phasesConfigured`);
 
+
+        await this.setObjectNotExistsAsync(`loadpoint.${index}.control.smartCostLimit`, {
+            type: 'state',
+            common: {
+                name: 'smartCostLimit 0 = delete',
+                type: 'number',
+                role: 'value',
+                read: true,
+                write: true,
+                def: 0,
+                unit: '€',
+            },
+            native: {},
+        });
+        this.subscribeStates(`loadpoint.${index}.control.smartCostLimit`);
+
         await this.setObjectNotExistsAsync(`loadpoint.${index}.control.enableThreshold`, {
             type: 'state',
             common: {
@@ -976,15 +969,43 @@ class Evcc extends utils.Adapter {
             });
     }
 
-    setEvccSmartcostlimit(index: string, value: ioBroker.StateValue): void {
-        this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/smartcostlimit/${value}`);
-        axios
-            .post(`http://${this.ip}/api/loadpoints/${index}/smartcostlimit/${value}`, { timeout: this.timeout })
+    setEvccsmartCostLimitLoadpoint(index: string, value: ioBroker.StateValue): void {
+        const numericValue = Number(value);
+        let callUrl = `http://${this.ip}/api/loadpoints/${index}/smartcostlimit`;
+
+        // Nur Wert anhängen, wenn > 0
+        if (numericValue > 0) {
+            callUrl += `/${numericValue}`;
+        }
+
+        this.log.debug(`call setEvccsmartCostLimitLoadpoint: ${callUrl}`);
+
+        axios.post(callUrl, null, { timeout: this.timeout })
             .then(() => {
                 this.log.info('Evcc update successful');
             })
             .catch(error => {
-                this.log.error(`12 ${error.message}`);
+                this.log.error(`setEvccsmartCostLimitLoadpoint failed: ${error.message}`);
+            });
+    }
+
+    setEvccsmartCostLimit(value: ioBroker.StateValue): void {
+        const numericValue = Number(value);
+        let callUrl = `http://${this.ip}/api/smartcostlimit`;
+
+        // Nur Wert anhängen, wenn > 0
+        if (numericValue > 0) {
+            callUrl += `/${numericValue}`;
+        }
+
+        this.log.debug(`call setEvccsmartCostLimit: ${callUrl}`);
+
+        axios.post(callUrl, null, { timeout: this.timeout })
+            .then(() => {
+                this.log.info('Evcc update successful');
+            })
+            .catch(error => {
+                this.log.error(`setEvccsmartCostLimit failed: ${error.message}`);
             });
     }
 
