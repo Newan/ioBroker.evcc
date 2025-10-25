@@ -23,6 +23,7 @@ Forum: https://forum.iobroker.net/topic/49165/neuer-adapter-iobroker-evcc
 -->
 
 ### **WORK IN PROGRESS**
+* (arteck) add batteryGridChargeLimit
 * (arteck) add smartcostlimit control
 
 ### 0.2.3 (2025-07-16)
