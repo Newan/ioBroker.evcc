@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "evcc",
-    "version": "0.2.3",
+    "version": "0.2.4",
     "news": {
+      "0.2.4": {
+        "en": "add batteryGridChargeLimit\nadd smartcostlimit control",
+        "de": "akku Das ist nicht möglich\nsmartcostlimit control",
+        "ru": "добавить аккумулятор GridhargeLimit\nдобавить smartcostlimit контроль",
+        "pt": "adicionar bateria GradeChargeLimit\nadicionar controlo smartcostlimit",
+        "nl": "batterij toevoegen RasterchargeLimit\nsmartcostlimit control toevoegen",
+        "fr": "ajouter une batterie ChargeGridLimiter\najouter un contrôle smartcostlimit",
+        "it": "aggiungere la batteria GridChargeLimit\naggiungere il controllo smartcostlimit",
+        "es": "añadir batería GridChargeLimit\nañadir control de costos inteligentes",
+        "pl": "dodać akumulator GridChargeLimit\ndodaj kontrolę ograniczenia kosztów",
+        "uk": "додати акумулятор СіткаХаржЛіміт\nдодавати smartcostlimit контроль",
+        "zh-cn": "添加电池 网格管理员Limit\n添加智能成本限制控制"
+      },
       "0.2.3": {
         "en": "simplify json response by removing result wrapper, see https://github.com/evcc-io/evcc/pull/22299",
         "de": "vereinfachung der json-reaktion durch entfernen der ergebnis-wrapper, siehe http://github.com/evcc-io/evcc/pull/22299",
@@ -28,7 +41,7 @@
         "pl": "foldery rozpuszczania corr",
         "uk": "корр розвести папки",
         "zh-cn": "corr 解散文件夹"
-      },     
+      },
       "0.2.0": {
         "en": "generate status folder",
         "de": "statusordner erstellen",

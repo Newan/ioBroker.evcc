@@ -1,4 +1,4 @@
-    //Funktionen zum sterun von evcc
+//Funktionen zum sterun von evcc
 import axios from 'axios';
 
 export class SendEvcc {

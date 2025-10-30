@@ -1,6 +1,6 @@
 {
   "name": "iobroker.evcc",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Controll evcc over rest api",
   "author": {
     "name": "Newan",
@@ -21,7 +21,7 @@
     "@iobroker/adapter-core": "^3.2.3",
     "axios": "^1.10.0"
   },
-   "engines": {
+  "engines": {
     "node": ">=20"
   },
   "devDependencies": {
