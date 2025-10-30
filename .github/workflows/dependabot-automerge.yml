@@ -8,10 +8,11 @@ on:
 
 jobs:
   auto-merge:
+    if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Check if PR should be auto-merged
         uses: ahmadnassri/action-dependabot-auto-merge@v2
