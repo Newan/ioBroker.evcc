@@ -144,6 +144,32 @@ class Evcc extends utils.Adapter {
             fn.apply(this, args);
         };
 
+                // --- Fahrzeug-bezogene Gruppen ---
+        if (group === 'vehicle' || group === 'plan') {
+            const vehicleMap: Record<string, () => void> = {
+                minSoc: () => this.evcc.setVehicleMinSoc(index, Number(val)),
+                limitSoc: () => this.evcc.setVehicleLimitSoc(index, Number(val)),
+                plan: () => {
+                    if (action === 'active') {
+                        this.log.info(`Set plan.active on vehicle: ${index} to ${val}`);
+                        this.evcc.setVehiclePlan(index, Boolean(val));
+                    }
+                },
+            };
+            return vehicleMap[action]?.();
+        }
+
+        // --- pvControl separat behandeln ---
+        if (action === 'pvControl') {
+            const pvMap: Record<number, () => void> = {
+                0: () => doAction('Stop evcc charging', this.evcc.setEvccStop, index),
+                1: () => doAction('Start evcc pv only charging', this.evcc.setEvccStartPV, index),
+                2: () => doAction('Start evcc minimal charging', this.evcc.setEvccStartMin, index),
+                3: () => doAction('Start evcc charging', this.evcc.setEvccStartNow, index),
+            };
+            return pvMap[Number(val)]?.();
+        }
+
         // --- Direktes Mapping für einfache Fälle ---
         const actionMap: Record<string, () => void> = {
             off: () => doAction('Stop evcc charging', this.evcc.setEvccStop, index),
@@ -161,35 +187,9 @@ class Evcc extends utils.Adapter {
                 doAction('Set smartCostLimit', this.evcc.setEvccsmartCostLimitLoadpoint, index, val),
         };
 
-        // --- pvControl separat behandeln ---
-        if (action === 'pvControl') {
-            const pvMap: Record<number, () => void> = {
-                0: () => doAction('Stop evcc charging', this.evcc.setEvccStop, index),
-                1: () => doAction('Start evcc pv only charging', this.evcc.setEvccStartPV, index),
-                2: () => doAction('Start evcc minimal charging', this.evcc.setEvccStartMin, index),
-                3: () => doAction('Start evcc charging', this.evcc.setEvccStartNow, index),
-            };
-            return pvMap[Number(val)]?.();
-        }
-
         // --- Wenn direkte Aktion existiert ---
         if (actionMap[action]) {
             return actionMap[action]();
-        }
-
-        // --- Fahrzeug-bezogene Gruppen ---
-        if (group === 'vehicle' || group === 'plan') {
-            const vehicleMap: Record<string, () => void> = {
-                minSoc: () => this.evcc.setVehicleMinSoc(index, Number(val)),
-                limitSoc: () => this.evcc.setVehicleLimitSoc(index, Number(val)),
-                plan: () => {
-                    if (action === 'active') {
-                        this.log.info(`Set plan.active on vehicle: ${index} to ${val}`);
-                        this.evcc.setVehiclePlan(index, Boolean(val));
-                    }
-                },
-            };
-            return vehicleMap[action]?.();
         }
 
         // --- EVCC-Root-Werte ---

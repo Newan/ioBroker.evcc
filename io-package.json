@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "evcc",
-    "version": "0.2.5",
+    "version": "0.2.6",
     "news": {
+      "0.2.6": {
+        "en": "fix set minSoc",
+        "de": "fix minSoc",
+        "ru": "обсуждение MinSoc",
+        "pt": "corrigir conjunto minSoc",
+        "nl": "fix set minSoc",
+        "fr": "fixer minSoc",
+        "it": "set di correzione minSoc",
+        "es": "fijador minSoc",
+        "pl": "fix set minSoc",
+        "uk": "фіксувати набір minSoc",
+        "zh-cn": "固定设置 minSoc"
+      },
       "0.2.5": {
         "en": "fix  vecle control",
         "de": "reparatur vecle control",
@@ -80,19 +93,6 @@
         "pl": "dodaj batteriemangement\ndodaj Granica SOC do punktu ładowania\nzmiana pojazdu w punkcie załadunku",
         "uk": "додати batteriemangement\nдодати Обмеження Soc до Loadpoint\nзміна транспортного засобу на loadpoint",
         "zh-cn": "添加击鼓\n添加 装入点的索克限制\n在负载点更换车辆"
-      },
-      "0.1.0": {
-        "en": "rewrite for evcc api changes\nadd multiple vehicle",
-        "de": "neu schreiben für evcc api änderungen\nmehrere fahrzeuge",
-        "ru": "переписать для evcc api изменений\nдобавить несколько транспортных средств",
-        "pt": "reescrever para mudanças de api evcc\nadicionar vários veículos",
-        "nl": "herschrijf voor evcc api veranderingen\nvoeg meerdere voertuigen toe",
-        "fr": "réécriture pour evcc api changes\najouter plusieurs véhicules",
-        "it": "riscrittura per evcc api modifiche\naggiungere più veicoli",
-        "es": "reescribir para cambios de evcc api\nañadir el vehículo múltiple",
-        "pl": "rewrite for evcc api changes (ang.)\ndodać multiple pojazdy",
-        "uk": "rewrite для evcc api зміни\nдодати багаторазовий автомобіль",
-        "zh-cn": "投 影\n增加多种车辆"
       }
     },
     "titleLang": {

@@ -21,8 +21,11 @@ Forum: https://forum.iobroker.net/topic/49165/neuer-adapter-iobroker-evcc
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### 0.2.6 (2026-02-13)
+* (arteck) fix set minSoc
+
 ### 0.2.5 (2026-02-13)
-* (arteck) fix  vecle control
+* (arteck) fix  vehicle control
 
 ### 0.2.4 (2025-10-30)
 * (arteck) add batteryGridChargeLimit
