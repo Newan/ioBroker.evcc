@@ -21,8 +21,7 @@ Forum: https://forum.iobroker.net/topic/49165/neuer-adapter-iobroker-evcc
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-
-### **WORK IN PROGRESS**
+### 0.2.5 (2026-02-13)
 * (arteck) fix  vecle control
 
 ### 0.2.4 (2025-10-30)

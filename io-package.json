@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "evcc",
-    "version": "0.2.4",
+    "version": "0.2.5",
     "news": {
+      "0.2.5": {
+        "en": "fix  vecle control",
+        "de": "reparatur vecle control",
+        "ru": "фиксировать контроль век",
+        "pt": "corrigir o controlo vecle",
+        "nl": "fix vecle control",
+        "fr": "réglage du vécle",
+        "it": "correzione del controllo vecle",
+        "es": "arreglar el control del vello",
+        "pl": "kontrola wekla",
+        "uk": "фіксувати контроль векле",
+        "zh-cn": "固定 vecle 控制"
+      },
       "0.2.4": {
         "en": "add batteryGridChargeLimit\nadd smartcostlimit control",
         "de": "akku Das ist nicht möglich\nsmartcostlimit control",
@@ -80,19 +93,6 @@
         "pl": "rewrite for evcc api changes (ang.)\ndodać multiple pojazdy",
         "uk": "rewrite для evcc api зміни\nдодати багаторазовий автомобіль",
         "zh-cn": "投 影\n增加多种车辆"
-      },
-      "0.0.10": {
-        "en": "generate dynamic objects\ntypo fixes",
-        "de": "dynamische objekte erzeugen\ntypo fixes",
-        "ru": "генерировать динамические объекты\ntypo исправления",
-        "pt": "gerar objetos dinâmicos\ncorreções de tipo",
-        "nl": "genereerde dynamische objecten\ntypo fixes",
-        "fr": "générer des objets dynamiques\ntypo corrige",
-        "it": "generare oggetti dinamici\ncorrezioni di battitura",
-        "es": "generar objetos dinámicos\ntypo fixes",
-        "pl": "generują dynamiczne obiekty\ntypo",
-        "uk": "генерувати динамічні об'єкти\nтипофіксатори",
-        "zh-cn": "产生动态目标\n类型"
       }
     },
     "titleLang": {
