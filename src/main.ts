@@ -1,7 +1,6 @@
 import * as utils from '@iobroker/adapter-core';
 import axios from 'axios';
 import type { Loadpoint } from './lib/loadpoint';
-import type { Battery } from './lib/battery';
 import type { Vehicle } from './lib/vehicle';
 import { SendEvcc } from './lib/sendEvcc';
 
@@ -99,35 +98,67 @@ class Evcc extends utils.Adapter {
         } // nur auf manuelle Änderungen reagieren
 
         const idParts = id.split('.');
-        const [i0, i1, i2, index, group, action] = idParts;
+
+        // Erwartete Formate (absolut):
+        // 4 Teile: <adapter>.<instance>.<channel>.<action>
+        // 5 Teile: <adapter>.<instance>.<channel>.<index>.<action>
+        // 6 Teile: <adapter>.<instance>.<channel>.<index>.<group>.<action>
+        let index: string | undefined;
+        let group: string | undefined;
+        let action: string | undefined;
+
+        switch (idParts.length) {
+            case 4: {
+                action = idParts[3];
+                break;
+            }
+            case 5: {
+                index = idParts[3];
+                group = idParts[2];
+                action = idParts[4];
+                break;
+            }
+            case 6: {
+                index = idParts[3];
+                group = idParts[4];
+                action = idParts[5];
+                break;
+            }
+            default:
+                this.log.warn(`Unexpected state ID format: ${id}`);
+                return;
+        }
+
+        if (!action) {
+            this.log.warn(`Unexpected state ID format (missing action): ${id}`);
+            return;
+        }
+
         const val = state.val;
 
         this.log.info(`state ${id} changed: ${val} (ack = ${state.ack})`);
 
         // --- Helper: Logging + Funktionsaufruf ---
-        const doAction = (
-            msg: string,
-            fn: (...args: any[]) => void,
-            ...args: any[]
-        ): void => {
-            this.log.info(`${msg} on loadpointindex: ${index}`);
+        const doAction = (msg: string, fn: (...args: any[]) => void, ...args: any[]): void => {
+            this.log.info(`${msg}${index !== undefined ? ` on loadpointindex: ${index}` : ''}`);
             fn.apply(this, args);
         };
 
         // --- Direktes Mapping für einfache Fälle ---
         const actionMap: Record<string, () => void> = {
-            off:        () => doAction('Stop evcc charging', this.evcc.setEvccStop, index),
-            now:        () => doAction('Start evcc charging', this.evcc.setEvccStartNow, index),
-            min:        () => doAction('Start evcc minimal charging',  this.evcc.setEvccStartMin, index),
-            pv:         () => doAction('Start evcc pv only charging', this.evcc.setEvccStartPV, index),
+            off: () => doAction('Stop evcc charging', this.evcc.setEvccStop, index),
+            now: () => doAction('Start evcc charging', this.evcc.setEvccStartNow, index),
+            min: () => doAction('Start evcc minimal charging', this.evcc.setEvccStartMin, index),
+            pv: () => doAction('Start evcc pv only charging', this.evcc.setEvccStartPV, index),
             minCurrent: () => doAction('Set minCurrent', this.evcc.setEvccMinCurrent, index, val),
             maxCurrent: () => doAction('Set maxCurrent', this.evcc.setEvccMaxCurrent, index, val),
             phasesConfigured: () => doAction('Set phasesConfigured', this.evcc.setEvccPhases, index, val),
             disable_threshold: () => doAction('Set disable threshold', this.evcc.setEvccDisableThreshold, index, val),
-            enable_threshold:  () => doAction('Set enable threshold', this.evcc.setEvccEnableThreshold, index, val),
-            limitSoc:    () => doAction('Set limitSoc', this.evcc.setEvccLimitSoc, index, Number(val)),
+            enable_threshold: () => doAction('Set enable threshold', this.evcc.setEvccEnableThreshold, index, val),
+            limitSoc: () => doAction('Set limitSoc', this.evcc.setEvccLimitSoc, index, Number(val)),
             vehicleName: () => doAction('Set vehicleName', this.evcc.setEvccVehicle, index, val),
-            smartCostLimit: () => doAction('Set smartCostLimit', this.evcc.setEvccsmartCostLimitLoadpoint, index, val),
+            smartCostLimit: () =>
+                doAction('Set smartCostLimit', this.evcc.setEvccsmartCostLimitLoadpoint, index, val),
         };
 
         // --- pvControl separat behandeln ---
@@ -147,9 +178,9 @@ class Evcc extends utils.Adapter {
         }
 
         // --- Fahrzeug-bezogene Gruppen ---
-        if (group === 'vehicle') {
+        if (group === 'vehicle' || group === 'plan') {
             const vehicleMap: Record<string, () => void> = {
-                minSoc:  () => this.evcc.setVehicleMinSoc(index, Number(val)),
+                minSoc: () => this.evcc.setVehicleMinSoc(index, Number(val)),
                 limitSoc: () => this.evcc.setVehicleLimitSoc(index, Number(val)),
                 plan: () => {
                     if (action === 'active') {
@@ -163,22 +194,22 @@ class Evcc extends utils.Adapter {
 
         // --- EVCC-Root-Werte ---
         const evccRootMap: Record<string, () => void> = {
-            bufferSoc:        () => this.evcc.setEvccBufferSoc(Number(val)),
-            bufferStartSoc:   () => this.evcc.setEvccBufferStartSoc(Number(val)),
-            prioritySoc:      () => this.evcc.setEvccPrioritySoc(Number(val)),
-            smartCostLimit:   () => this.evcc.setEvccsmartCostLimit(Number(val)),
+            bufferSoc: () => this.evcc.setEvccBufferSoc(Number(val)),
+            bufferStartSoc: () => this.evcc.setEvccBufferStartSoc(Number(val)),
+            prioritySoc: () => this.evcc.setEvccPrioritySoc(Number(val)),
+            smartCostLimit: () => this.evcc.setEvccsmartCostLimit(Number(val)),
             batteryGridChargeLimit: () => this.evcc.setEvccBatteryGridChargeLimit(Number(val)),
         };
 
-        if (evccRootMap[index]) {
-            return evccRootMap[index]();
+        // Bei Root-Werten steckt der "Schlüssel" im 4. Segment (index-Variable ist dann undefined)
+        if (index === undefined && evccRootMap[action]) {
+            return evccRootMap[action]();
         }
 
         // --- Fallback ---
         this.log.debug(JSON.stringify(idParts));
         this.log.warn(`Unhandled state change: ${id} -> ${val}`);
     }
-
 
     /**
      * Hole Daten vom EVCC
@@ -493,7 +524,7 @@ class Evcc extends utils.Adapter {
             ack: true,
         });
 
-        //Ladeplanung hinzufürgen
+        //Ladeplanung hinzufügen
         await this.extendObjectAsync(`vehicle.${vehicleIndex}.plan.active`, {
             type: 'state',
             common: {

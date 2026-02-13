@@ -124,12 +124,43 @@ class Evcc extends utils.Adapter {
             return;
         } // nur auf manuelle Änderungen reagieren
         const idParts = id.split('.');
-        const [i0, i1, i2, index, group, action] = idParts;
+        // Erwartete Formate (absolut):
+        // 4 Teile: <adapter>.<instance>.<channel>.<action>
+        // 5 Teile: <adapter>.<instance>.<channel>.<index>.<action>
+        // 6 Teile: <adapter>.<instance>.<channel>.<index>.<group>.<action>
+        let index;
+        let group;
+        let action;
+        switch (idParts.length) {
+            case 4: {
+                action = idParts[3];
+                break;
+            }
+            case 5: {
+                index = idParts[3];
+                group = idParts[2];
+                action = idParts[4];
+                break;
+            }
+            case 6: {
+                index = idParts[3];
+                group = idParts[4];
+                action = idParts[5];
+                break;
+            }
+            default:
+                this.log.warn(`Unexpected state ID format: ${id}`);
+                return;
+        }
+        if (!action) {
+            this.log.warn(`Unexpected state ID format (missing action): ${id}`);
+            return;
+        }
         const val = state.val;
         this.log.info(`state ${id} changed: ${val} (ack = ${state.ack})`);
         // --- Helper: Logging + Funktionsaufruf ---
         const doAction = (msg, fn, ...args) => {
-            this.log.info(`${msg} on loadpointindex: ${index}`);
+            this.log.info(`${msg}${index !== undefined ? ` on loadpointindex: ${index}` : ''}`);
             fn.apply(this, args);
         };
         // --- Direktes Mapping für einfache Fälle ---
@@ -162,7 +193,7 @@ class Evcc extends utils.Adapter {
             return actionMap[action]();
         }
         // --- Fahrzeug-bezogene Gruppen ---
-        if (group === 'vehicle') {
+        if (group === 'vehicle' || group === 'plan') {
             const vehicleMap = {
                 minSoc: () => this.evcc.setVehicleMinSoc(index, Number(val)),
                 limitSoc: () => this.evcc.setVehicleLimitSoc(index, Number(val)),
@@ -183,8 +214,9 @@ class Evcc extends utils.Adapter {
             smartCostLimit: () => this.evcc.setEvccsmartCostLimit(Number(val)),
             batteryGridChargeLimit: () => this.evcc.setEvccBatteryGridChargeLimit(Number(val)),
         };
-        if (evccRootMap[index]) {
-            return evccRootMap[index]();
+        // Bei Root-Werten steckt der "Schlüssel" im 4. Segment (index-Variable ist dann undefined)
+        if (index === undefined && evccRootMap[action]) {
+            return evccRootMap[action]();
         }
         // --- Fallback ---
         this.log.debug(JSON.stringify(idParts));
@@ -478,7 +510,7 @@ class Evcc extends utils.Adapter {
             val: vehicleData.limitSoc !== undefined ? vehicleData.limitSoc : 100,
             ack: true,
         });
-        //Ladeplanung hinzufürgen
+        //Ladeplanung hinzufügen
         await this.extendObjectAsync(`vehicle.${vehicleIndex}.plan.active`, {
             type: 'state',
             common: {
