@@ -29,7 +29,7 @@ class Evcc extends utils.Adapter {
         // Initialize your adapter here
         //Püfen die übergabe der IP
         if (this.config.ip) {
-            if (this.config.ip != '0.0.0.0' && this.config.ip != '') {
+            if (this.config.ip !== '0.0.0.0' && this.config.ip !== '') {
                 this.config.ip = this.config.ip.replace('http', '');
                 this.config.ip = this.config.ip.replace('://', '');
 
@@ -76,7 +76,7 @@ class Evcc extends utils.Adapter {
         try {
             clearInterval(this.adapterIntervals);
             callback();
-        } catch (e) {
+        } catch {
             callback();
         }
     }
@@ -144,7 +144,7 @@ class Evcc extends utils.Adapter {
             fn.apply(this, args);
         };
 
-                // --- Fahrzeug-bezogene Gruppen ---
+        // --- Fahrzeug-bezogene Gruppen ---
         if (group === 'vehicle' || group === 'plan') {
             const vehicleMap: Record<string, () => void> = {
                 minSoc: () => this.evcc.setVehicleMinSoc(index, Number(val)),
@@ -224,11 +224,11 @@ class Evcc extends utils.Adapter {
                     //Global status Items - ohne loadpoints - ohne vehicle
                     let respData = response.data;
 
-                    if (response.data.hasOwnProperty('result')) {  // https://github.com/evcc-io/evcc/pull/22299
+                    if (Object.prototype.hasOwnProperty.call(response.data, 'result')) {  // https://github.com/evcc-io/evcc/pull/22299
                         respData = response.data.result;
                     }
 
-                    this.setStatusEvcc(respData, '');
+                    this.setStatusEvcc(respData);
 
                     //Laden jeden Ladepunkt einzeln
                     const tmpListLoadpoints: Loadpoint[] = respData.loadpoints;
@@ -340,9 +340,72 @@ class Evcc extends utils.Adapter {
         this.subscribeStates('control.bufferStartSoc');
     }
 
-    async setStatusEvcc(daten: any, knoten: string): Promise<void> {
-        // Bestimmte Control-Werte direkt setzen
-        const controlMapping: { [key: string]: string } = {
+    private isIgnoredEvccEntry(entry: string): boolean {
+        return ['result', 'vehicles', 'loadpoints', 'feedin', 'grid', 'planer', 'planner'].includes(entry);
+    }
+
+    private isEmptyEvccValue(value: unknown): boolean {
+        return value == null || JSON.stringify(value) === '{}' || JSON.stringify(value) === '[]';
+    }
+
+    private formatEvccPathEntry(entry: string): string {
+        return isNaN(Number(entry)) ? this.capitalizeFirst(entry) : entry;
+    }
+
+    private async ensureEvccChannel(path: string, name: string): Promise<void> {
+        await this.setObjectNotExists(path, {
+            type: 'channel',
+            common: { role: 'value', name },
+            native: {},
+        });
+    }
+
+    private async ensureEvccState(path: string, name: string, type: string): Promise<void> {
+        // @ts-ignore
+        await this.setObjectNotExists(path, {
+            type: 'state',
+            common: {
+                role: 'value',
+                name,
+                type,
+                read: true,
+                write: false,
+            },
+            native: {},
+        });
+    }
+
+    private async writeEvccState(path: string, name: string, value: any): Promise<void> {
+        const valueType = typeof value;
+        await this.ensureEvccState(path, name, valueType);
+        // @ts-ignore
+        this.setState(path, valueType === 'object' ? JSON.stringify(value) : value, true);
+    }
+
+    private async writeEvccNestedObject(basePath: string, data: Record<string, any>): Promise<void> {
+        for (const [entry, value] of Object.entries(data)) {
+            if (value === undefined || this.isIgnoredEvccEntry(entry)) {
+                continue;
+            }
+
+            const formattedEntry = this.formatEvccPathEntry(entry);
+            const entryPath = `${basePath}.${formattedEntry}`;
+
+            if (typeof value === 'object' && value !== null) {
+                await this.ensureEvccChannel(entryPath, formattedEntry);
+
+                for (const [dataPoint, keyData] of Object.entries(value)) {
+                    await this.writeEvccState(`${entryPath}.${dataPoint}`, dataPoint, keyData);
+                }
+                continue;
+            }
+
+            await this.writeEvccState(entryPath, entry, value);
+        }
+    }
+
+    async setStatusEvcc(daten: any): Promise<void> {
+        const controlMapping: Record<string, string> = {
             bufferStartSoc: 'control.bufferStartSoc',
             prioritySoc: 'control.prioritySoc',
             bufferSoc: 'control.bufferSoc',
@@ -351,114 +414,27 @@ class Evcc extends utils.Adapter {
         };
 
         for (const [lpEntry, lpData] of Object.entries(daten)) {
-            if (['result', 'vehicles', 'loadpoints'].includes(lpEntry)) {
+            if (this.isIgnoredEvccEntry(lpEntry) || this.isEmptyEvccValue(lpData)) {
                 continue;
             }
-            if (lpData == null || JSON.stringify(lpData) === '{}' || JSON.stringify(lpData) === '[]') {
+
+            if (controlMapping[lpEntry]) {
+                // @ts-ignore
+                this.setState(controlMapping[lpEntry], { val: lpData, ack: true });
                 continue;
             }
 
             const lpType = typeof lpData;
 
-            if (controlMapping[lpEntry]) {
-                // @ts-ignore
-                this.setState(controlMapping[lpEntry],  { val: lpData, ack: true });
-                continue;
-            }
-
             if (lpType === 'object' && this.config.dissolveObjects) {
-                const lpEntryFormatted = this.capitalizeFirst(lpEntry);
-                await this.setObjectNotExists(`status.${lpEntryFormatted}`, {
-                    type: 'channel',
-                    common: { role: 'value', name: lpEntryFormatted },
-                    native: {},
-                });
-
-                for (const [lpEntry1, lpData1] of Object.entries(lpData)) {
-                    if (lpData1 == undefined) {
-                        continue;
-                    }
-
-                    const pfad = `status.${lpEntryFormatted}`;
-                    const lpEntryFormatted1 = isNaN(Number(lpEntry1)) ? this.capitalizeFirst(lpEntry1) : lpEntry1;
-                    const lpType1 = typeof lpData1;
-
-                    if (lpType1 == 'object' && lpData1 !== null) {
-                        await this.setObjectNotExists(`${pfad}.${lpEntryFormatted1}`, {
-                            type: 'channel',
-                            common: { role: 'value', name: lpEntryFormatted1 },
-                            native: {},
-                        });
-
-                        for (const [dataPoint, keyData] of Object.entries(lpData1)) {
-                            const keyType = typeof keyData;
-                            // @ts-ignore
-                            await this.setObjectNotExists(`${pfad}.${lpEntryFormatted1}.${dataPoint}`, {
-                                type: 'state',
-                                common: {
-                                    role: 'value',
-                                    name: dataPoint,
-                                    type: keyType,
-                                    read: true,
-                                    write: false,
-                                },
-                                native: {},
-                            });
-                            // @ts-ignore
-                            this.setState(`${pfad}.${lpEntryFormatted1}.${dataPoint}`, keyType === 'object' ? JSON.stringify(keyData) : keyData, true);
-                        }
-                    } else {
-                        // @ts-ignore
-                        await this.setObjectNotExists(`${pfad}.${lpEntry1}`, {
-                            type: 'state',
-                            common: {
-                                role: 'value',
-                                name: lpEntry1,
-                                type: lpType1,
-                                read: true,
-                                write: false,
-                            },
-                            native: {},
-                        });
-                        this.setState(`${pfad}.${lpEntry1}`, lpData1, true);
-                    }
-                }
+                const formattedEntry = this.formatEvccPathEntry(lpEntry);
+                const basePath = `status.${formattedEntry}`;
+                await this.ensureEvccChannel(basePath, formattedEntry);
+                await this.writeEvccNestedObject(basePath, lpData as Record<string, any>);
                 continue;
             }
 
-            if (knoten && this.config.dissolveObjects) {
-                // @ts-ignore
-                await this.setObjectNotExists(`status.${lpEntry}`, {
-                    type: 'state',
-                    common: {
-                        role: 'value',
-                        name: lpEntry,
-                        type: lpType,
-                        read: true,
-                        write: false,
-                    },
-                    native: {},
-                });
-
-                if (lpType == 'object' && lpData !== null) {
-                    await this.setStatusEvcc(lpData, lpEntry);
-                }
-            } else {
-                // @ts-ignore
-                await this.setObjectNotExists(`status.${lpEntry}`, {
-                    type: 'state',
-                    common: {
-                        role: 'value',
-                        name: lpEntry,
-                        type: lpType,
-                        read: true,
-                        write: false,
-                    },
-                    native: {},
-                });
-                // @ts-ignore
-                this.setState(`status.${lpEntry}`, lpType === 'object' ? JSON.stringify(lpData) : lpData, true);
-            }
+            await this.writeEvccState(`status.${lpEntry}`, lpEntry, lpData);
         }
     }
 
@@ -474,6 +450,7 @@ class Evcc extends utils.Adapter {
      */
     async setVehicleData(vehicleIndex: string, vehicleData: Vehicle): Promise<void> {
         this.log.debug(`Vehicle mit index ${vehicleIndex} gefunden...`);
+        const firstPlan = vehicleData.plans?.[0];
 
         await this.extendObjectAsync(`vehicle.${vehicleIndex}.title`, {
             type: 'state',
@@ -538,7 +515,7 @@ class Evcc extends utils.Adapter {
         });
         this.subscribeStates(`vehicle.${vehicleIndex}.plan.active`);
         await this.setStateAsync(`vehicle.${vehicleIndex}.plan.active`, {
-            val: vehicleData.plans !== undefined ? true : false,
+            val: firstPlan !== undefined,
             ack: true,
         });
 
@@ -556,7 +533,7 @@ class Evcc extends utils.Adapter {
         });
         this.subscribeStates(`vehicle.${vehicleIndex}.plan.planSoc`);
         await this.setStateAsync(`vehicle.${vehicleIndex}.plan.planSoc`, {
-            val: vehicleData.plans !== undefined ? vehicleData.plans[0].soc : 0,
+            val: firstPlan?.soc ?? 0,
             ack: true,
         });
 
@@ -573,7 +550,7 @@ class Evcc extends utils.Adapter {
         });
         this.subscribeStates(`vehicle.${vehicleIndex}.plan.time`);
         await this.setStateAsync(`vehicle.${vehicleIndex}.plan.time`, {
-            val: vehicleData.plans !== undefined ? vehicleData.plans[0].time : 0,
+            val: firstPlan?.time ?? 0,
             ack: true,
         });
     }
@@ -643,11 +620,11 @@ class Evcc extends utils.Adapter {
 
             let res = loaddata[lpEntry];
 
-            if (lpType == 'object') {
+            if (lpType === 'object') {
                 res = JSON.stringify(res);
             }
 
-            if (lpEntry == 'chargeDuration' || lpEntry == 'connectedDuration') {
+            if (lpEntry === 'chargeDuration' || lpEntry === 'connectedDuration') {
                 res = this.changeMiliSeconds(res);
                 lpType = 'string';
             }

@@ -14,12 +14,48 @@ class SendEvcc {
         this.ip = ip;
         this.timeout = timeout;
         this.log = {
-            silly: text => console.log(text),
-            debug: text => console.log(text),
-            info: text => console.log(text),
-            log: text => console.log(text),
-            warn: text => console.warn(text),
-            error: text => console.error(text),
+            silly: text => {
+                if (log) {
+                    log.silly(text);
+                    return;
+                }
+                console.log(text);
+            },
+            debug: text => {
+                if (log) {
+                    log.debug(text);
+                    return;
+                }
+                console.log(text);
+            },
+            info: text => {
+                if (log) {
+                    log.info(text);
+                    return;
+                }
+                console.log(text);
+            },
+            log: text => {
+                if (log) {
+                    log.info(text);
+                    return;
+                }
+                console.log(text);
+            },
+            warn: text => {
+                if (log) {
+                    log.warn(text);
+                    return;
+                }
+                console.warn(text);
+            },
+            error: text => {
+                if (log) {
+                    log.error(text);
+                    return;
+                }
+                console.error(text);
+            },
         };
     }
     setEvccStartPV(index) {

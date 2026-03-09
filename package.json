@@ -1,6 +1,6 @@
 {
   "name": "iobroker.evcc",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "Controll evcc over rest api",
   "author": {
     "name": "Newan",
@@ -57,7 +57,7 @@
   },
   "main": "build/main.js",
   "scripts": {
-    "prebuild": "npm run build",
+    "prebuild": "",
     "build:ts": "tsc -p tsconfig.build.json",
     "build": "npm run build:ts",
     "watch:ts": "tsc -p tsconfig.build.json --watch",
