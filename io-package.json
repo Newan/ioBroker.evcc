@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "evcc",
-    "version": "0.2.7",
+    "version": "0.2.8",
     "news": {
+      "0.2.8": {
+        "en": "reduce read request, static dp read only once",
+        "de": "leseanfrage reduzieren, statische dp nur einmal lesen",
+        "ru": "уменьшить запрос на чтение, статический dp читать только один раз",
+        "pt": "reduzir pedido de leitura, dp estático lido apenas uma vez",
+        "nl": "leesverzoek verminderen, statische dp slechts eenmaal lezen",
+        "fr": "réduire la demande de lecture, dp statique lire une seule fois",
+        "it": "ridurre la richiesta di lettura, dp statico leggere solo una volta",
+        "es": "reducir la solicitud de lectura, dp estática leer sólo una vez",
+        "pl": "zmniejszyć żądanie odczytu, statyczny dp tylko raz",
+        "uk": "зменшити запит на читання, статичний dp читати тільки один раз",
+        "zh-cn": "减少读请求, 静态 dp 只读一次"
+      },
       "0.2.7": {
         "en": "delete big arrays feedin, grid, planner\nrefactor tests",
         "de": "große arrays futter, gitter, planer löschen\nrefaktortests",
@@ -80,19 +93,6 @@
         "pl": "foldery rozpuszczania corr",
         "uk": "корр розвести папки",
         "zh-cn": "corr 解散文件夹"
-      },
-      "0.2.0": {
-        "en": "generate status folder",
-        "de": "statusordner erstellen",
-        "ru": "генерировать статусную папку",
-        "pt": "gerar pasta de status",
-        "nl": "statusmap genereren",
-        "fr": "générer le dossier d'état",
-        "it": "generare cartella di stato",
-        "es": "generar carpeta de estado",
-        "pl": "generowanie folderu statusu",
-        "uk": "генерувати папку стану",
-        "zh-cn": "生成状态文件夹"
       }
     },
     "titleLang": {

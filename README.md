@@ -21,6 +21,9 @@ Forum: https://forum.iobroker.net/topic/49165/neuer-adapter-iobroker-evcc
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### 0.2.8 (2026-03-09)
+* (arteck) reduce read request, static dp read only once
+
 ### 0.2.7 (2026-03-09)
 * (arteck) delete big arrays feedin, grid, planner
 * (arteck) refactor tests

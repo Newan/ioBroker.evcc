@@ -3,10 +3,34 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.EVCC_CONTROL_MAPPING = void 0;
+exports.isIgnoredEvccEntry = isIgnoredEvccEntry;
+exports.isEmptyEvccValue = isEmptyEvccValue;
+exports.capitalizeFirst = capitalizeFirst;
+exports.formatEvccPathEntry = formatEvccPathEntry;
 exports.isObject = isObject;
 exports.isArray = isArray;
 exports.translateText = translateText;
 const axios_1 = __importDefault(require("axios"));
+exports.EVCC_CONTROL_MAPPING = {
+    bufferStartSoc: 'control.bufferStartSoc',
+    prioritySoc: 'control.prioritySoc',
+    bufferSoc: 'control.bufferSoc',
+    smartCostLimit: 'control.smartCostLimit',
+    batteryGridChargeLimit: 'control.batteryGridChargeLimit',
+};
+function isIgnoredEvccEntry(entry) {
+    return ['result', 'vehicles', 'loadpoints', 'feedin', 'grid', 'planer', 'planner'].includes(entry);
+}
+function isEmptyEvccValue(value) {
+    return value == null || JSON.stringify(value) === '{}' || JSON.stringify(value) === '[]';
+}
+function capitalizeFirst(text) {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+}
+function formatEvccPathEntry(entry) {
+    return isNaN(Number(entry)) ? capitalizeFirst(entry) : entry;
+}
 /**
  * Tests whether the given variable is a real object and not an Array
  *

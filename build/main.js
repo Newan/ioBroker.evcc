@@ -38,6 +38,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const utils = __importStar(require("@iobroker/adapter-core"));
 const axios_1 = __importDefault(require("axios"));
+const tools_1 = require("./lib/tools");
 const sendEvcc_1 = require("./lib/sendEvcc");
 class Evcc extends utils.Adapter {
     ip = '';
@@ -46,6 +47,7 @@ class Evcc extends utils.Adapter {
     maxLoadpointIndex = -1;
     adapterIntervals; //halten von allen Intervallen
     evcc;
+    adapterStart = false;
     constructor(options = {}) {
         super({
             ...options,
@@ -59,8 +61,6 @@ class Evcc extends utils.Adapter {
      * Is called when databases are connected and adapter received configuration.
      */
     async onReady() {
-        // Initialize your adapter here
-        //Püfen die übergabe der IP
         if (this.config.ip) {
             if (this.config.ip !== '0.0.0.0' && this.config.ip !== '') {
                 this.config.ip = this.config.ip.replace('http', '');
@@ -78,7 +78,6 @@ class Evcc extends utils.Adapter {
             this.log.error('No ip is set, adapter stop');
             return;
         }
-        //Prüfen Polltime
         if (this.config.polltime > 0) {
             this.polltime = this.config.polltime;
             this.timeout = this.polltime * 1000 - 500; //'500ms unter interval'
@@ -89,6 +88,7 @@ class Evcc extends utils.Adapter {
         }
         this.evcc = new sendEvcc_1.SendEvcc(this.ip, this.timeout, this.log);
         await this.createEvccControl();
+        this.adapterStart = false;
         this.getEvccData();
         //War alles ok, dann können wir die Daten abholen
         this.adapterIntervals = this.setInterval(() => this.getEvccData(), this.polltime * 1000);
@@ -236,7 +236,18 @@ class Evcc extends utils.Adapter {
                 if (Object.prototype.hasOwnProperty.call(response.data, 'result')) { // https://github.com/evcc-io/evcc/pull/22299
                     respData = response.data.result;
                 }
+                if (this.adapterStart) {
+                    respData.eebus = [];
+                    respData.hems = [];
+                    respData.influx = [];
+                    respData.messagingEvents = [];
+                    respData.mqtt = [];
+                    respData.network = [];
+                    respData.sponsor = [];
+                    respData.shm = [];
+                }
                 this.setStatusEvcc(respData);
+                this.adapterStart = true;
                 //Laden jeden Ladepunkt einzeln
                 const tmpListLoadpoints = respData.loadpoints;
                 tmpListLoadpoints.forEach(async (loadpoint, index) => {
@@ -340,15 +351,6 @@ class Evcc extends utils.Adapter {
         });
         this.subscribeStates('control.bufferStartSoc');
     }
-    isIgnoredEvccEntry(entry) {
-        return ['result', 'vehicles', 'loadpoints', 'feedin', 'grid', 'planer', 'planner'].includes(entry);
-    }
-    isEmptyEvccValue(value) {
-        return value == null || JSON.stringify(value) === '{}' || JSON.stringify(value) === '[]';
-    }
-    formatEvccPathEntry(entry) {
-        return isNaN(Number(entry)) ? this.capitalizeFirst(entry) : entry;
-    }
     async ensureEvccChannel(path, name) {
         await this.setObjectNotExists(path, {
             type: 'channel',
@@ -378,10 +380,10 @@ class Evcc extends utils.Adapter {
     }
     async writeEvccNestedObject(basePath, data) {
         for (const [entry, value] of Object.entries(data)) {
-            if (value === undefined || this.isIgnoredEvccEntry(entry)) {
+            if (value === undefined || (0, tools_1.isIgnoredEvccEntry)(entry)) {
                 continue;
             }
-            const formattedEntry = this.formatEvccPathEntry(entry);
+            const formattedEntry = (0, tools_1.formatEvccPathEntry)(entry);
             const entryPath = `${basePath}.${formattedEntry}`;
             if (typeof value === 'object' && value !== null) {
                 await this.ensureEvccChannel(entryPath, formattedEntry);
@@ -394,25 +396,18 @@ class Evcc extends utils.Adapter {
         }
     }
     async setStatusEvcc(daten) {
-        const controlMapping = {
-            bufferStartSoc: 'control.bufferStartSoc',
-            prioritySoc: 'control.prioritySoc',
-            bufferSoc: 'control.bufferSoc',
-            smartCostLimit: 'control.smartCostLimit',
-            batteryGridChargeLimit: 'control.batteryGridChargeLimit',
-        };
         for (const [lpEntry, lpData] of Object.entries(daten)) {
-            if (this.isIgnoredEvccEntry(lpEntry) || this.isEmptyEvccValue(lpData)) {
+            if ((0, tools_1.isIgnoredEvccEntry)(lpEntry) || (0, tools_1.isEmptyEvccValue)(lpData)) {
                 continue;
             }
-            if (controlMapping[lpEntry]) {
+            if (tools_1.EVCC_CONTROL_MAPPING[lpEntry]) {
                 // @ts-ignore
-                this.setState(controlMapping[lpEntry], { val: lpData, ack: true });
+                this.setState(tools_1.EVCC_CONTROL_MAPPING[lpEntry], { val: lpData, ack: true });
                 continue;
             }
             const lpType = typeof lpData;
             if (lpType === 'object' && this.config.dissolveObjects) {
-                const formattedEntry = this.formatEvccPathEntry(lpEntry);
+                const formattedEntry = (0, tools_1.formatEvccPathEntry)(lpEntry);
                 const basePath = `status.${formattedEntry}`;
                 await this.ensureEvccChannel(basePath, formattedEntry);
                 await this.writeEvccNestedObject(basePath, lpData);
@@ -420,9 +415,6 @@ class Evcc extends utils.Adapter {
             }
             await this.writeEvccState(`status.${lpEntry}`, lpEntry, lpData);
         }
-    }
-    capitalizeFirst(text) {
-        return text.charAt(0).toUpperCase() + text.slice(1);
     }
     /**
      * Hole Daten von und für Vehicle

@@ -1,5 +1,29 @@
 import axios from 'axios';
 
+export const EVCC_CONTROL_MAPPING: Readonly<Record<string, string>> = {
+    bufferStartSoc: 'control.bufferStartSoc',
+    prioritySoc: 'control.prioritySoc',
+    bufferSoc: 'control.bufferSoc',
+    smartCostLimit: 'control.smartCostLimit',
+    batteryGridChargeLimit: 'control.batteryGridChargeLimit',
+};
+
+export function isIgnoredEvccEntry(entry: string): boolean {
+    return ['result', 'vehicles', 'loadpoints', 'feedin', 'grid', 'planer', 'planner'].includes(entry);
+}
+
+export function isEmptyEvccValue(value: unknown): boolean {
+    return value == null || JSON.stringify(value) === '{}' || JSON.stringify(value) === '[]';
+}
+
+export function capitalizeFirst(text: string): string {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+export function formatEvccPathEntry(entry: string): string {
+    return isNaN(Number(entry)) ? capitalizeFirst(entry) : entry;
+}
+
 /**
  * Tests whether the given variable is a real object and not an Array
  *
