@@ -22,7 +22,7 @@
     "axios": "^1.10.0"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "devDependencies": {
     "@alcalzone/release-script": "^3.8.0",
