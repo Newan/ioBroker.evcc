@@ -411,6 +411,18 @@ class Evcc extends utils.Adapter {
     }
 
     async setStatusEvcc(daten: any): Promise<void> {
+        // Handle forecast conditionally when weatherForecast is enabled
+        if (this.config.weatherForecast && daten.forecast && !isEmptyEvccValue(daten.forecast)) {
+            const forecastData = daten.forecast;
+            if (typeof forecastData === 'object') {
+                const basePath = 'status.Forecast';
+                await this.ensureEvccChannel(basePath, 'Forecast');
+                await this.writeEvccNestedObject(basePath, forecastData as Record<string, any>);
+            } else {
+                await this.writeEvccState('status.forecast', 'forecast', forecastData);
+            }
+        }
+
         for (const [lpEntry, lpData] of Object.entries(daten)) {
             if (isIgnoredEvccEntry(lpEntry) || isEmptyEvccValue(lpData)) {
                 continue;

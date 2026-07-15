@@ -21,8 +21,12 @@ Forum: https://forum.iobroker.net/topic/49165/neuer-adapter-iobroker-evcc
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
-- (copilot) Adapter requires node.js >= 22 now
+
+### 0.2.10 (2026-07-15)
+* (arteck) add configurable weather forcast grid
+
+### 0.2.9 (2026-07-15)
+* (arteck) add grid request
 
 ### 0.2.8 (2026-03-09)
 * (arteck) reduce read request, static dp read only once

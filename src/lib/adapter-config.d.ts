@@ -8,6 +8,7 @@ declare global {
             port: number;
             polltime: number;
             dissolveObjects: boolean;
+            weatherForecast: boolean;
         }
     }
 }
