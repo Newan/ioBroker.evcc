@@ -20,7 +20,7 @@ exports.EVCC_CONTROL_MAPPING = {
     batteryGridChargeLimit: 'control.batteryGridChargeLimit',
 };
 function isIgnoredEvccEntry(entry) {
-    return ['result', 'vehicles', 'loadpoints', 'feedin', 'grid', 'planer', 'planner'].includes(entry);
+    return ['result', 'vehicles', 'loadpoints', 'feedin', 'planer', 'planner'].includes(entry);
 }
 function isEmptyEvccValue(value) {
     return value == null || JSON.stringify(value) === '{}' || JSON.stringify(value) === '[]';

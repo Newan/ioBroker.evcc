@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "evcc",
-    "version": "0.2.8",
+    "version": "0.2.9",
     "news": {
+      "0.2.9": {
+        "en": "add grid request",
+        "de": "Anfrage zum Hinzufügen eines Rasters",
+        "ru": "добавить запрос сетки",
+        "pt": "adicionar solicitação de grade",
+        "nl": "rasterverzoek toevoegen",
+        "fr": "ajouter une demande de grille",
+        "it": "aggiungi richiesta griglia",
+        "es": "agregar solicitud de cuadrícula",
+        "pl": "dodanie żądania siatki",
+        "uk": "запит на додавання сітки",
+        "zh-cn": "添加网格请求"
+      },
       "0.2.8": {
         "en": "reduce read request, static dp read only once",
         "de": "leseanfrage reduzieren, statische dp nur einmal lesen",
@@ -80,19 +93,6 @@
         "pl": "uprościć odpowiedź json poprzez usunięcie owijania wyników, patrz https: / / github.com / evcc- io / evcc / pull / 22299",
         "uk": "спрощує json відповідь шляхом видалення результату обгортання, див. https://github.com/evcc-io/evcc/pull/22299",
         "zh-cn": "通过删除结果包装来简化 json 响应,参见 https://github.com/evcc-io/evcc/pul/22299 互联网档案馆的存檔,存档日期2013-09-02"
-      },
-      "0.2.2": {
-        "en": "corr dissolve folders",
-        "de": "korr löst ordner",
-        "ru": "rr растворять папки",
-        "pt": "pastas de dissolver corr",
-        "nl": "corr oplossen van mappen",
-        "fr": "corr dissout les dossiers",
-        "it": "corr dissolvere le cartelle",
-        "es": "corr disuelve carpetas",
-        "pl": "foldery rozpuszczania corr",
-        "uk": "корр розвести папки",
-        "zh-cn": "corr 解散文件夹"
       }
     },
     "titleLang": {
