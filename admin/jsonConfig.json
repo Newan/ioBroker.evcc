@@ -55,7 +55,18 @@
         "_spacer": {
           "type": "divider",
           "color": "secondary"
-        }
+        },
+        "weatherForecast":  {
+          "newLine": true,
+          "type": "checkbox",
+          "label": "Weather Forecast",
+          "default": false,
+          "xs": 12,
+          "sm": 12,
+          "md": 6,
+          "lg": 4,
+          "xl": 4
+         }
       }
     }
   }
