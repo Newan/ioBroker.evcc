@@ -396,6 +396,18 @@ class Evcc extends utils.Adapter {
         }
     }
     async setStatusEvcc(daten) {
+        // Handle forecast conditionally when weatherForecast is enabled
+        if (this.config.weatherForecast && daten.forecast && !(0, tools_1.isEmptyEvccValue)(daten.forecast)) {
+            const forecastData = daten.forecast;
+            if (typeof forecastData === 'object') {
+                const basePath = 'status.Forecast';
+                await this.ensureEvccChannel(basePath, 'Forecast');
+                await this.writeEvccNestedObject(basePath, forecastData);
+            }
+            else {
+                await this.writeEvccState('status.forecast', 'forecast', forecastData);
+            }
+        }
         for (const [lpEntry, lpData] of Object.entries(daten)) {
             if ((0, tools_1.isIgnoredEvccEntry)(lpEntry) || (0, tools_1.isEmptyEvccValue)(lpData)) {
                 continue;

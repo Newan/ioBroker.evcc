@@ -1,8 +1,34 @@
 {
   "common": {
     "name": "evcc",
-    "version": "0.2.8",
+    "version": "0.2.10",
     "news": {
+      "0.2.10": {
+        "en": "add configurable weather forcast grid",
+        "de": "konfigurierbares Wettervorhersageraster hinzufügen",
+        "ru": "добавить настраиваемую сетку прогноза погоды",
+        "pt": "Adicionar grade de previsão do tempo configurável",
+        "nl": "Voeg een configureerbaar raster voor weersvoorspellingen toe.",
+        "fr": "ajouter une grille de prévisions météorologiques configurable",
+        "it": "aggiungi griglia di previsioni meteo configurabile",
+        "es": "agregar cuadrícula de pronóstico meteorológico configurable",
+        "pl": "dodaj konfigurowalną siatkę prognozy pogody",
+        "uk": "додати налаштовувану сітку прогнозу погоди",
+        "zh-cn": "添加可配置的天气预报网格"
+      },
+      "0.2.9": {
+        "en": "add grid request",
+        "de": "Anfrage zum Hinzufügen eines Rasters",
+        "ru": "добавить запрос сетки",
+        "pt": "adicionar solicitação de grade",
+        "nl": "rasterverzoek toevoegen",
+        "fr": "ajouter une demande de grille",
+        "it": "aggiungi richiesta griglia",
+        "es": "agregar solicitud de cuadrícula",
+        "pl": "dodanie żądania siatki",
+        "uk": "запит на додавання сітки",
+        "zh-cn": "添加网格请求"
+      },
       "0.2.8": {
         "en": "reduce read request, static dp read only once",
         "de": "leseanfrage reduzieren, statische dp nur einmal lesen",
@@ -67,32 +93,6 @@
         "pl": "dodać akumulator GridChargeLimit\ndodaj kontrolę ograniczenia kosztów",
         "uk": "додати акумулятор СіткаХаржЛіміт\nдодавати smartcostlimit контроль",
         "zh-cn": "添加电池 网格管理员Limit\n添加智能成本限制控制"
-      },
-      "0.2.3": {
-        "en": "simplify json response by removing result wrapper, see https://github.com/evcc-io/evcc/pull/22299",
-        "de": "vereinfachung der json-reaktion durch entfernen der ergebnis-wrapper, siehe http://github.com/evcc-io/evcc/pull/22299",
-        "ru": "упростите реакцию json, удалив обертку результата, см. https://github.com/evcc-io/evcc/pull/22299",
-        "pt": "simplifique a resposta json removendo o invólucro do resultado, veja https://github.com/evcc-io/evcc/pull/22299",
-        "nl": "json response vereenvoudigen door het verwijderen van resultaat wrapper, zie https://github.com/evcc-io/evcc/pull/22299",
-        "fr": "simplifier la réponse de json en supprimant l'emballage de résultat, voir https://github.com/evcc-io/evcc/pull/22299",
-        "it": "semplificare la risposta json rimuovendo l'involucro dei risultati, vedere https://github.com/evcc-io/evcc/pull/22299",
-        "es": "simplificar la respuesta json mediante la eliminación de la envoltura del resultado, ver https://github.com/evcc-io/evcc/pull/22299",
-        "pl": "uprościć odpowiedź json poprzez usunięcie owijania wyników, patrz https: / / github.com / evcc- io / evcc / pull / 22299",
-        "uk": "спрощує json відповідь шляхом видалення результату обгортання, див. https://github.com/evcc-io/evcc/pull/22299",
-        "zh-cn": "通过删除结果包装来简化 json 响应,参见 https://github.com/evcc-io/evcc/pul/22299 互联网档案馆的存檔,存档日期2013-09-02"
-      },
-      "0.2.2": {
-        "en": "corr dissolve folders",
-        "de": "korr löst ordner",
-        "ru": "rr растворять папки",
-        "pt": "pastas de dissolver corr",
-        "nl": "corr oplossen van mappen",
-        "fr": "corr dissout les dossiers",
-        "it": "corr dissolvere le cartelle",
-        "es": "corr disuelve carpetas",
-        "pl": "foldery rozpuszczania corr",
-        "uk": "корр розвести папки",
-        "zh-cn": "corr 解散文件夹"
       }
     },
     "titleLang": {

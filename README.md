@@ -22,8 +22,11 @@ Forum: https://forum.iobroker.net/topic/49165/neuer-adapter-iobroker-evcc
     ### **WORK IN PROGRESS**
 -->
 
-### **WORK IN PROGRESS**
-- (ioBroker-Bot) Adapter requires js-controller >= 6.0.11 now.
+### 0.2.10 (2026-07-15)
+* (arteck) add configurable weather forcast grid
+
+### 0.2.9 (2026-07-15)
+* (arteck) add grid request
 
 ### 0.2.8 (2026-03-09)
 * (arteck) reduce read request, static dp read only once
@@ -87,6 +90,8 @@ Forum: https://forum.iobroker.net/topic/49165/neuer-adapter-iobroker-evcc
 
 ### 0.0.2 (2021-11-07)
 * (Newan) initial release
+
+[Older changelogs can be found there](CHANGELOG_OLD.md)
 
 ## License
 MIT License

@@ -9,7 +9,7 @@ export const EVCC_CONTROL_MAPPING: Readonly<Record<string, string>> = {
 };
 
 export function isIgnoredEvccEntry(entry: string): boolean {
-    return ['result', 'vehicles', 'loadpoints', 'feedin', 'grid', 'planer', 'planner'].includes(entry);
+    return ['result', 'vehicles', 'loadpoints', 'feedin', 'planer', 'planner', 'forecast'].includes(entry);
 }
 
 export function isEmptyEvccValue(value: unknown): boolean {
