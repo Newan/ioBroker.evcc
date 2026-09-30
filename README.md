@@ -16,11 +16,30 @@ Controll evcc over rest api
 
 Forum: https://forum.iobroker.net/topic/49165/neuer-adapter-iobroker-evcc
 
+## Charge mode (evcc >= 0.316.0)
+
+evcc 0.316.0 renamed the mode `pv` to `smart` and replaced `minpv` with the separate setting `alwaysCharge`
+([evcc PR #32490](https://github.com/evcc-io/evcc/pull/32490)). The adapter detects the evcc version automatically
+and keeps working with older versions.
+
+| State | Values | Note |
+|---|---|---|
+| `loadpoint.X.control.off` / `.now` / `.smart` | button | set mode |
+| `loadpoint.X.control.alwaysCharge` | `off`, `on`, `once` | evcc >= 0.316.0 only, `once` resets when the vehicle is disconnected |
+| `loadpoint.X.control.pvControl` | `0` off, `1` smart, `2` smart + always charge, `3` now | now also reflects the current evcc mode |
+| `loadpoint.X.control.pv` / `.min` | button | deprecated, mapped to smart + alwaysCharge off / on |
+
+**Breaking for scripts/visualizations:** with evcc >= 0.316.0, `loadpoint.X.status.mode` reports `smart` instead of `pv`/`minpv`.
+Use `loadpoint.X.status.alwaysCharge` or `loadpoint.X.control.pvControl` to distinguish the former min+pv mode.
+
 ## Changelog
 <!--
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (Schimi1983) support evcc 0.316 mode redesign: new `control.smart` and `control.alwaysCharge`, `pvControl` reflects the evcc mode
+* (Schimi1983) fix: request timeout was sent as POST body and never applied
 
 ### 0.2.10 (2026-07-15)
 * (arteck) add configurable weather forcast grid

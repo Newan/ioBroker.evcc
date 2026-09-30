@@ -14,7 +14,8 @@ export interface Loadpoint {
     hasVehicle: boolean; //true,
     maxCurrent: number; //16,
     minCurrent: number; //6,
-    mode: string; //off,
+    mode: string; //off | smart | now (evcc < 0.316: off | pv | minpv | now)
+    alwaysCharge?: string; //off | on | once (evcc >= 0.316)
     phasesConfigured: number; //3,
     timerActive: boolean; //true,
     timerProjectedEnd: string; //2021-11-06T20:59:00+01:00,
