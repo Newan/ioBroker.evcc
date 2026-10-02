@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "evcc",
-    "version": "0.2.10",
+    "version": "0.3.0",
     "news": {
+      "0.3.0": {
+        "en": "support evcc 0.316 mode redesign: new `control.smart` and `control.alwaysCharge`, `pvControl` reflects the evcc mode\nfix: request timeout was sent as POST body and never applied\nDependencies have been updated",
+        "de": "unterstützt EVCC 0.316 Modus-Redesign: neue `control.smart` und `Control.alwaysCharge`, `pvControl` gibt den EVCC-Modus an\nFix: Timeout wurde als POST-Text gesendet und nie angewendet\nAbhängigkeiten wurden aktualisiert",
+        "ru": "поддержка редизайна режима evcc 0.316: новые «control.smart» и «control.alwaysCharge», «PVControl» отражает режим evcc\nисправлено: тайм-аут запроса был отправлен в виде тела POST и так и не был применен\nЗависимости обновлены",
+        "pt": "suporta o redesenho do modo evcc 0.316: os novos `control.smart` e `control.alwaysCharge`, `pvControl` refletem o modo evcc\nfix: o tempo limite foi enviado como POST e nunca aplicado\nAs dependências foram atualizadas",
+        "nl": "ondersteuning voor herontwerp van de modus evcc 0.316: nieuw `control.smart` en `Control.AlwaysCharge`, `PVControl` geeft de evcc-modus weer\nopgelost: de time-out van het verzoek werd als POST-hoofdtekst verzonden en nooit toegepast\nAfhankelijkheden zijn bijgewerkt",
+        "fr": "supporte la refonte du mode evcc 0.316 : nouveaux « control.smart » et « Control.AlwaysCharge », « PVControl » reflète le mode evcc\nfix : le délai d'attente a été envoyé POST et n'a jamais été appliqué\nLes dépendances ont été mises à jour",
+        "it": "supporta la riprogettazione in modalità evcc 0.316: nuovi `control.smart` e `alwaysCharge`, `pvControl`\nfix: il timeout è stato inviato come POST e mai applicato\nLe dipendenze sono aggiornate",
+        "es": "admite el rediseño del modo evcc 0.316: nuevos `Control.smart` y `Control.AlwaysCharge`, `pvControl` refleja el modo evcc\ncorrección: la solicitud se agotó como POST y nunca se aplicó\nSe han actualizado las dependencias",
+        "pl": "obsługa przeprojektowania trybu evcc 0.316: nowe `control.smart` i `Control.AlwaysCharge`, `PVControl` odzwierciedla tryb evcc\npoprawka: limit czasu żądania został wysłany jako treść POST i nigdy nie został zastosowany\nZależności zostały zaktualizowane",
+        "uk": "підтримка редизайну режиму evcc 0.316: нові `control.smart` і `Control.AlwaysCharge`, `PVControl` відображає режим evcc\nвиправлено: час очікування запиту було надіслано як тіло POST і ніколи не застосовано\nЗалежності оновлено",
+        "zh-cn": "支持 evcc 0.316 模式重新设计：新的 `control.smart` 和 `Control.AlwaysCharge`，`pvControl` 反映了 evcc 模式\n修复：请求超时是作为 POST 正文发送的，从未应用过\n依赖关系已更新"
+      },
       "0.2.10": {
         "en": "add configurable weather forcast grid",
         "de": "konfigurierbares Wettervorhersageraster hinzufügen",
@@ -80,19 +93,6 @@
         "pl": "kontrola wekla",
         "uk": "фіксувати контроль векле",
         "zh-cn": "固定 vecle 控制"
-      },
-      "0.2.4": {
-        "en": "add batteryGridChargeLimit\nadd smartcostlimit control",
-        "de": "akku Das ist nicht möglich\nsmartcostlimit control",
-        "ru": "добавить аккумулятор GridhargeLimit\nдобавить smartcostlimit контроль",
-        "pt": "adicionar bateria GradeChargeLimit\nadicionar controlo smartcostlimit",
-        "nl": "batterij toevoegen RasterchargeLimit\nsmartcostlimit control toevoegen",
-        "fr": "ajouter une batterie ChargeGridLimiter\najouter un contrôle smartcostlimit",
-        "it": "aggiungere la batteria GridChargeLimit\naggiungere il controllo smartcostlimit",
-        "es": "añadir batería GridChargeLimit\nañadir control de costos inteligentes",
-        "pl": "dodać akumulator GridChargeLimit\ndodaj kontrolę ograniczenia kosztów",
-        "uk": "додати акумулятор СіткаХаржЛіміт\nдодавати smartcostlimit контроль",
-        "zh-cn": "添加电池 网格管理员Limit\n添加智能成本限制控制"
       }
     },
     "titleLang": {

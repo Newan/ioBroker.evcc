@@ -1,6 +1,6 @@
 {
   "name": "iobroker.evcc",
-  "version": "0.2.10",
+  "version": "0.3.0",
   "description": "Controll evcc over rest api",
   "author": {
     "name": "Newan",
@@ -53,7 +53,8 @@
     "sinon-chai": "^4.0.0",
     "source-map-support": "^0.5.21",
     "ts-node": "^10.9.1",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.0"
   },
   "main": "build/main.js",
   "scripts": {
