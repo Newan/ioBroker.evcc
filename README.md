@@ -40,6 +40,7 @@ Use `loadpoint.X.status.alwaysCharge` or `loadpoint.X.control.pvControl` to dist
 ### **WORK IN PROGRESS**
 * (Schimi1983) support evcc 0.316 mode redesign: new `control.smart` and `control.alwaysCharge`, `pvControl` reflects the evcc mode
 * (Schimi1983) fix: request timeout was sent as POST body and never applied
+* (arteck) Dependencies have been updated
 
 ### 0.2.10 (2026-07-15)
 * (arteck) add configurable weather forcast grid
