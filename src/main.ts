@@ -9,6 +9,15 @@ import {
 import type { Loadpoint } from './lib/loadpoint';
 import type { Vehicle } from './lib/vehicle';
 import { SendEvcc } from './lib/sendEvcc';
+import {
+    ALWAYS_CHARGE_VALUES,
+    hasSmartModeApi,
+    isAlwaysChargeValue,
+    PvControl,
+    toPvControl,
+    type EvccAlwaysCharge,
+    type EvccMode,
+} from './lib/mode';
 
 class Evcc extends utils.Adapter {
     private ip = '';
@@ -18,6 +27,8 @@ class Evcc extends utils.Adapter {
     private adapterIntervals: any; //halten von allen Intervallen
     private evcc: any;
     private adapterStart = false;
+    /** true when evcc >= 0.316.0 (smart + alwaysCharge), detected on every poll */
+    private smartModeApi = false;
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({
             ...options,
@@ -168,20 +179,23 @@ class Evcc extends utils.Adapter {
         // --- pvControl separat behandeln ---
         if (action === 'pvControl') {
             const pvMap: Record<number, () => void> = {
-                0: () => doAction('Stop evcc charging', this.evcc.setEvccStop, index),
-                1: () => doAction('Start evcc pv only charging', this.evcc.setEvccStartPV, index),
-                2: () => doAction('Start evcc minimal charging', this.evcc.setEvccStartMin, index),
-                3: () => doAction('Start evcc charging', this.evcc.setEvccStartNow, index),
+                [PvControl.Off]: () => void this.setChargeMode(index, 'off'),
+                [PvControl.Smart]: () => void this.setChargeMode(index, 'smart', 'off'),
+                [PvControl.SmartAlwaysCharge]: () => void this.setChargeMode(index, 'smart', 'on'),
+                [PvControl.Now]: () => void this.setChargeMode(index, 'now'),
             };
             return pvMap[Number(val)]?.();
         }
 
         // --- Direktes Mapping für einfache Fälle ---
         const actionMap: Record<string, () => void> = {
-            off: () => doAction('Stop evcc charging', this.evcc.setEvccStop, index),
-            now: () => doAction('Start evcc charging', this.evcc.setEvccStartNow, index),
-            min: () => doAction('Start evcc minimal charging', this.evcc.setEvccStartMin, index),
-            pv: () => doAction('Start evcc pv only charging', this.evcc.setEvccStartPV, index),
+            off: () => void this.setChargeMode(index, 'off'),
+            now: () => void this.setChargeMode(index, 'now'),
+            smart: () => void this.setChargeMode(index, 'smart'),
+            // deprecated since evcc 0.316.0: pv = smart without alwaysCharge, min = smart with alwaysCharge
+            pv: () => void this.setChargeMode(index, 'smart', 'off'),
+            min: () => void this.setChargeMode(index, 'smart', 'on'),
+            alwaysCharge: () => void this.setAlwaysCharge(index, val),
             minCurrent: () => doAction('Set minCurrent', this.evcc.setEvccMinCurrent, index, val),
             maxCurrent: () => doAction('Set maxCurrent', this.evcc.setEvccMaxCurrent, index, val),
             phasesConfigured: () => doAction('Set phasesConfigured', this.evcc.setEvccPhases, index, val),
@@ -215,6 +229,64 @@ class Evcc extends utils.Adapter {
         // --- Fallback ---
         this.log.debug(JSON.stringify(idParts));
         this.log.warn(`Unhandled state change: ${id} -> ${val}`);
+    }
+
+    /**
+     * Sets the charge mode of a loadpoint, using the API of the detected evcc version.
+     * evcc < 0.316.0: smart is sent as pv, smart + alwaysCharge on as minpv.
+     * evcc >= 0.316.0: mode and alwaysCharge are sent separately.
+     *
+     * @param index loadpoint index (starts with 1)
+     * @param mode target mode (off | smart | now)
+     * @param alwaysCharge optional alwaysCharge value, only used together with smart
+     */
+    private async setChargeMode(
+        index: string | undefined,
+        mode: 'off' | 'smart' | 'now',
+        alwaysCharge?: EvccAlwaysCharge,
+    ): Promise<void> {
+        if (index === undefined) {
+            this.log.warn(`Cannot set mode ${mode}: missing loadpoint index`);
+            return;
+        }
+        this.log.info(`Set mode ${mode}${alwaysCharge ? ` (alwaysCharge ${alwaysCharge})` : ''} on loadpointindex: ${index}`);
+
+        if (!this.smartModeApi) {
+            let legacyMode: EvccMode = mode;
+            if (mode === 'smart') {
+                legacyMode = alwaysCharge === 'on' || alwaysCharge === 'once' ? 'minpv' : 'pv';
+            }
+            await this.evcc.setEvccMode(index, legacyMode);
+            return;
+        }
+
+        const ok: boolean = await this.evcc.setEvccMode(index, mode);
+        if (ok && mode === 'smart' && alwaysCharge !== undefined) {
+            await this.evcc.setEvccAlwaysCharge(index, alwaysCharge);
+        }
+    }
+
+    /**
+     * Sets alwaysCharge of a loadpoint (evcc >= 0.316.0 only).
+     *
+     * @param index loadpoint index (starts with 1)
+     * @param value off | on | once
+     */
+    private async setAlwaysCharge(index: string | undefined, value: ioBroker.StateValue): Promise<void> {
+        if (index === undefined) {
+            this.log.warn('Cannot set alwaysCharge: missing loadpoint index');
+            return;
+        }
+        if (!isAlwaysChargeValue(value)) {
+            this.log.warn(`Invalid alwaysCharge value "${String(value)}", allowed: ${ALWAYS_CHARGE_VALUES.join(', ')}`);
+            return;
+        }
+        if (!this.smartModeApi) {
+            this.log.warn('alwaysCharge requires evcc >= 0.316.0, use control.min / pvControl = 2 instead');
+            return;
+        }
+        this.log.info(`Set alwaysCharge ${value} on loadpointindex: ${index}`);
+        await this.evcc.setEvccAlwaysCharge(index, value);
     }
 
     /**
@@ -616,6 +688,21 @@ class Evcc extends utils.Adapter {
             ack: true,
         });
 
+        // Mode: evcc >= 0.316.0 reports smart + alwaysCharge, older versions pv/minpv
+        this.smartModeApi = hasSmartModeApi(loadpoint);
+
+        const pvControl = toPvControl(loadpoint.mode, loadpoint.alwaysCharge);
+        if (pvControl !== null) {
+            await this.setStateAsync(`loadpoint.${index}.control.pvControl`, { val: pvControl, ack: true });
+        }
+
+        if (isAlwaysChargeValue(loadpoint.alwaysCharge)) {
+            await this.setStateAsync(`loadpoint.${index}.control.alwaysCharge`, {
+                val: loadpoint.alwaysCharge,
+                ack: true,
+            });
+        }
+
         //Alle Werte unter Status veröffentlichen
         this.setStatusLoadPoint(loadpoint, index);
     }
@@ -679,10 +766,42 @@ class Evcc extends utils.Adapter {
         });
         this.subscribeStates(`loadpoint.${index}.control.now`);
 
-        await this.setObjectNotExistsAsync(`loadpoint.${index}.control.min`, {
+        await this.setObjectNotExistsAsync(`loadpoint.${index}.control.smart`, {
             type: 'state',
             common: {
-                name: 'Start min pv charging',
+                name: 'Start smart charging (evcc < 0.316: pv)',
+                type: 'boolean',
+                role: 'button',
+                read: false,
+                write: true,
+            },
+            native: {},
+        });
+        this.subscribeStates(`loadpoint.${index}.control.smart`);
+
+        await this.setObjectNotExistsAsync(`loadpoint.${index}.control.alwaysCharge`, {
+            type: 'state',
+            common: {
+                name: 'Always charge at min current (evcc >= 0.316)',
+                type: 'string',
+                role: 'level',
+                read: true,
+                write: true,
+                states: {
+                    off: 'off',
+                    on: 'on',
+                    once: 'once',
+                },
+            },
+            native: {},
+        });
+        this.subscribeStates(`loadpoint.${index}.control.alwaysCharge`);
+
+        // extendObject: also update name for existing installations
+        await this.extendObjectAsync(`loadpoint.${index}.control.min`, {
+            type: 'state',
+            common: {
+                name: 'Deprecated: smart + alwaysCharge on (min+pv)',
                 type: 'boolean',
                 role: 'button',
                 read: false,
@@ -692,10 +811,10 @@ class Evcc extends utils.Adapter {
         });
         this.subscribeStates(`loadpoint.${index}.control.min`);
 
-        await this.setObjectNotExistsAsync(`loadpoint.${index}.control.pv`, {
+        await this.extendObjectAsync(`loadpoint.${index}.control.pv`, {
             type: 'state',
             common: {
-                name: 'Start pv only charging',
+                name: 'Deprecated: smart + alwaysCharge off (pv)',
                 type: 'boolean',
                 role: 'button',
                 read: false,
@@ -705,7 +824,8 @@ class Evcc extends utils.Adapter {
         });
         this.subscribeStates(`loadpoint.${index}.control.pv`);
 
-        await this.setObjectNotExistsAsync(`loadpoint.${  index  }.control.pvControl`, {
+        // extendObject: also update state labels for existing installations
+        await this.extendObjectAsync(`loadpoint.${index}.control.pvControl`, {
             type: 'state',
             common: {
                 name: 'control charging',
@@ -715,15 +835,15 @@ class Evcc extends utils.Adapter {
                 write: true,
                 def: 0,
                 states: {
-                    0: 'off',
-                    1: 'pv',
-                    2: 'min',
-                    3: 'now'
-                }
+                    [PvControl.Off]: 'off',
+                    [PvControl.Smart]: 'smart (pv)',
+                    [PvControl.SmartAlwaysCharge]: 'smart + always charge (min+pv)',
+                    [PvControl.Now]: 'now',
+                },
             },
             native: {},
         });
-        this.subscribeStates(`loadpoint.${  index  }.control.pvControl`);
+        this.subscribeStates(`loadpoint.${index}.control.pvControl`);
 
         await this.setObjectNotExistsAsync(`loadpoint.${index}.control.maxCurrent`, {
             type: 'state',

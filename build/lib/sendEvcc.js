@@ -58,54 +58,51 @@ class SendEvcc {
             },
         };
     }
-    setEvccStartPV(index) {
-        this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/mode/pv`);
-        axios_1.default
-            .post(`http://${this.ip}/api/loadpoints/${index}/mode/pv`, { timeout: this.timeout })
-            .then(() => {
+    /**
+     * Sets the charge mode of a loadpoint.
+     * Accepts old (pv, minpv) and new (smart) values; evcc >= 0.316.0 translates old values itself.
+     *
+     * @param index loadpoint index (starts with 1)
+     * @param mode charge mode
+     * @returns resolves true on success, false on error (error is logged)
+     */
+    async setEvccMode(index, mode) {
+        const url = `http://${this.ip}/api/loadpoints/${index}/mode/${mode}`;
+        this.log.debug(`call: ${url}`);
+        try {
+            await axios_1.default.post(url, null, { timeout: this.timeout });
             this.log.info('Evcc update successful');
-        })
-            .catch(error => {
-            this.log.error(`1 ${error.message}`);
-        });
+            return true;
+        }
+        catch (error) {
+            this.log.error(`setEvccMode (${mode}) failed: ${error.message}`);
+            return false;
+        }
     }
-    setEvccStartMin(index) {
-        this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/mode/minpv`);
-        axios_1.default
-            .post(`http://${this.ip}/api/loadpoints/${index}/mode/minpv`, { timeout: this.timeout })
-            .then(() => {
+    /**
+     * Sets `alwaysCharge` of a loadpoint (evcc >= 0.316.0).
+     *
+     * @param index loadpoint index (starts with 1)
+     * @param value off | on | once
+     * @returns resolves true on success, false on error (error is logged)
+     */
+    async setEvccAlwaysCharge(index, value) {
+        const url = `http://${this.ip}/api/loadpoints/${index}/alwayscharge/${value}`;
+        this.log.debug(`call: ${url}`);
+        try {
+            await axios_1.default.post(url, null, { timeout: this.timeout });
             this.log.info('Evcc update successful');
-        })
-            .catch(error => {
-            this.log.error(`2 ${error.message}`);
-        });
-    }
-    setEvccStartNow(index) {
-        this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/mode/now`);
-        axios_1.default
-            .post(`http://${this.ip}/api/loadpoints/${index}/mode/now`, { timeout: this.timeout })
-            .then(() => {
-            this.log.info('Evcc update successful');
-        })
-            .catch(error => {
-            this.log.error(`3  ${error.message}`);
-        });
-    }
-    setEvccStop(index) {
-        this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/mode/off`);
-        axios_1.default
-            .post(`http://${this.ip}/api/loadpoints/${index}/mode/off`, { timeout: this.timeout })
-            .then(() => {
-            this.log.info('Evcc update successful');
-        })
-            .catch(error => {
-            this.log.error(`4 ${error.message}`);
-        });
+            return true;
+        }
+        catch (error) {
+            this.log.error(`setEvccAlwaysCharge (${value}) failed: ${error.message}`);
+            return false;
+        }
     }
     setEvccMinCurrent(index, value) {
         this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/mincurrent/${value}`);
         axios_1.default
-            .post(`http://${this.ip}/api/loadpoints/${index}/mincurrent/${value}`, { timeout: this.timeout })
+            .post(`http://${this.ip}/api/loadpoints/${index}/mincurrent/${value}`, null, { timeout: this.timeout })
             .then(() => {
             this.log.info('Evcc update successful');
         })
@@ -116,7 +113,7 @@ class SendEvcc {
     setEvccMaxCurrent(index, value) {
         this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/maxcurrent/${value}`);
         axios_1.default
-            .post(`http://${this.ip}/api/loadpoints/${index}/maxcurrent/${value}`, { timeout: this.timeout })
+            .post(`http://${this.ip}/api/loadpoints/${index}/maxcurrent/${value}`, null, { timeout: this.timeout })
             .then(() => {
             this.log.info('Evcc update successful');
         })
@@ -127,7 +124,7 @@ class SendEvcc {
     setEvccPhases(index, value) {
         this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/phases/${value}`);
         axios_1.default
-            .post(`http://${this.ip}/api/loadpoints/${index}/phases/${value}`, { timeout: this.timeout })
+            .post(`http://${this.ip}/api/loadpoints/${index}/phases/${value}`, null, { timeout: this.timeout })
             .then(() => {
             this.log.info('Evcc update successful');
         })
@@ -138,7 +135,7 @@ class SendEvcc {
     setEvccDisableThreshold(index, value) {
         this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/disable/threshold/${value}`);
         axios_1.default
-            .post(`http://${this.ip}/api/loadpoints/${index}/disable/threshold/${value}`, {
+            .post(`http://${this.ip}/api/loadpoints/${index}/disable/threshold/${value}`, null, {
             timeout: this.timeout,
         })
             .then(() => {
@@ -151,7 +148,7 @@ class SendEvcc {
     setEvccEnableThreshold(index, value) {
         this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/enable/threshold/${value}`);
         axios_1.default
-            .post(`http://${this.ip}/api/loadpoints/${index}/enable/threshold/${value}`, {
+            .post(`http://${this.ip}/api/loadpoints/${index}/enable/threshold/${value}`, null, {
             timeout: this.timeout,
         })
             .then(() => {
@@ -164,7 +161,7 @@ class SendEvcc {
     setEvccLimitSoc(index, value) {
         this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/limitsoc/${value}`);
         axios_1.default
-            .post(`http://${this.ip}/api/loadpoints/${index}/limitsoc/${value}`, { timeout: this.timeout })
+            .post(`http://${this.ip}/api/loadpoints/${index}/limitsoc/${value}`, null, { timeout: this.timeout })
             .then(() => {
             this.log.info('Evcc update successful');
         })
@@ -220,7 +217,7 @@ class SendEvcc {
         else {
             this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/vehicle/${value}`);
             axios_1.default
-                .post(`http://${this.ip}/api/loadpoints/${index}/vehicle/${value}`, { timeout: this.timeout })
+                .post(`http://${this.ip}/api/loadpoints/${index}/vehicle/${value}`, null, { timeout: this.timeout })
                 .then(() => {
                 this.log.info('Evcc update successful');
             })
@@ -232,7 +229,7 @@ class SendEvcc {
     setEvccBufferSoc(bufferSoc) {
         this.log.debug(`call: ` + `http://${this.ip}/api/buffersoc/${bufferSoc}`);
         axios_1.default
-            .post(`http://${this.ip}/api/buffersoc/${bufferSoc}`, { timeout: this.timeout })
+            .post(`http://${this.ip}/api/buffersoc/${bufferSoc}`, null, { timeout: this.timeout })
             .then(() => {
             this.log.info('Evcc update successful');
         })
@@ -243,7 +240,7 @@ class SendEvcc {
     setEvccBufferStartSoc(bufferStartSoc) {
         this.log.debug(`call: ` + `http://${this.ip}/api/bufferstartsoc/${bufferStartSoc}`);
         axios_1.default
-            .post(`http://${this.ip}/api/bufferstartsoc/${bufferStartSoc}`, { timeout: this.timeout })
+            .post(`http://${this.ip}/api/bufferstartsoc/${bufferStartSoc}`, null, { timeout: this.timeout })
             .then(() => {
             this.log.info('Evcc update successful');
         })
@@ -254,7 +251,7 @@ class SendEvcc {
     setEvccPrioritySoc(prioritySoc) {
         this.log.debug(`call: ` + `http://${this.ip}/api/prioritysoc/${prioritySoc}`);
         axios_1.default
-            .post(`http://${this.ip}/api/prioritysoc/${prioritySoc}`, { timeout: this.timeout })
+            .post(`http://${this.ip}/api/prioritysoc/${prioritySoc}`, null, { timeout: this.timeout })
             .then(() => {
             this.log.info('Evcc update successful');
         })
@@ -265,7 +262,7 @@ class SendEvcc {
     setVehicleMinSoc(vehicleID, minSoc) {
         this.log.debug(`call: ` + `http://${this.ip}/api/vehicles/${vehicleID}/minsoc/${minSoc}`);
         axios_1.default
-            .post(`http://${this.ip}/api/vehicles/${vehicleID}/minsoc/${minSoc}`, { timeout: this.timeout })
+            .post(`http://${this.ip}/api/vehicles/${vehicleID}/minsoc/${minSoc}`, null, { timeout: this.timeout })
             .then(() => {
             this.log.info('Evcc update successful');
         })
@@ -276,7 +273,7 @@ class SendEvcc {
     setVehicleLimitSoc(vehicleID, minSoc) {
         this.log.debug(`call: ` + `http://${this.ip}/api/vehicles/${vehicleID}/limitsoc/${minSoc}`);
         axios_1.default
-            .post(`http://${this.ip}/api/vehicles/${vehicleID}/limitsoc/${minSoc}`, { timeout: this.timeout })
+            .post(`http://${this.ip}/api/vehicles/${vehicleID}/limitsoc/${minSoc}`, null, { timeout: this.timeout })
             .then(() => {
             this.log.info('Evcc update successful');
         })
@@ -298,7 +295,7 @@ class SendEvcc {
             // wenn soc < 0 => active = false
             this.log.debug(`call: ` + `http://${this.ip}/api/vehicles/${vehicleID}/plan/soc/100/${rfc3339Date}`);
             axios_1.default
-                .post(`http://${this.ip}/api/vehicles/${vehicleID}/plan/soc/100/${rfc3339Date}`, {
+                .post(`http://${this.ip}/api/vehicles/${vehicleID}/plan/soc/100/${rfc3339Date}`, null, {
                 timeout: this.timeout,
             })
                 .then(() => {
@@ -323,7 +320,7 @@ class SendEvcc {
     setEvccTargetSoc(index, value) {
         this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/target/soc/${value}`);
         axios_1.default
-            .post(`http://${this.ip}/api/loadpoints/${index}/target/soc/${value}`, { timeout: this.timeout })
+            .post(`http://${this.ip}/api/loadpoints/${index}/target/soc/${value}`, null, { timeout: this.timeout })
             .then(() => {
             this.log.info('Evcc update successful');
         })
@@ -334,7 +331,7 @@ class SendEvcc {
     setEvccMinSoc(index, value) {
         this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/minsoc/${value}`);
         axios_1.default
-            .post(`http://${this.ip}/api/loadpoints/${index}/minsoc/${value}`, { timeout: this.timeout })
+            .post(`http://${this.ip}/api/loadpoints/${index}/minsoc/${value}`, null, { timeout: this.timeout })
             .then(() => {
             this.log.info('Evcc update successful');
         })
@@ -345,7 +342,7 @@ class SendEvcc {
     setEvccSetTargetTime(index, value) {
         this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/target/time/${value}`);
         axios_1.default
-            .post(`http://${this.ip}/api/loadpoints/${index}/target/time/${value}`, { timeout: this.timeout })
+            .post(`http://${this.ip}/api/loadpoints/${index}/target/time/${value}`, null, { timeout: this.timeout })
             .then(() => {
             this.log.info('Evcc update successful');
         })
