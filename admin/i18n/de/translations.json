@@ -6,5 +6,6 @@
     "ip_help": "IP-Adresse zu Ihrer evcc-Installation",
     "port": "Port",
     "port_help": "Port zu Ihrer evcc-Installation",
-    "dissolveObjects": "Status Knoten auflösen"
+    "dissolveObjects": "Status Knoten auflösen",
+    "Weather Forecast": "Wettervorhersage"
 }

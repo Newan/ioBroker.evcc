@@ -16,32 +16,6 @@
         "uk": "підтримка редизайну режиму evcc 0.316: нові `control.smart` і `Control.AlwaysCharge`, `PVControl` відображає режим evcc\nвиправлено: час очікування запиту було надіслано як тіло POST і ніколи не застосовано\nЗалежності оновлено",
         "zh-cn": "支持 evcc 0.316 模式重新设计：新的 `control.smart` 和 `Control.AlwaysCharge`，`pvControl` 反映了 evcc 模式\n修复：请求超时是作为 POST 正文发送的，从未应用过\n依赖关系已更新"
       },
-      "0.2.10": {
-        "en": "add configurable weather forcast grid",
-        "de": "konfigurierbares Wettervorhersageraster hinzufügen",
-        "ru": "добавить настраиваемую сетку прогноза погоды",
-        "pt": "Adicionar grade de previsão do tempo configurável",
-        "nl": "Voeg een configureerbaar raster voor weersvoorspellingen toe.",
-        "fr": "ajouter une grille de prévisions météorologiques configurable",
-        "it": "aggiungi griglia di previsioni meteo configurabile",
-        "es": "agregar cuadrícula de pronóstico meteorológico configurable",
-        "pl": "dodaj konfigurowalną siatkę prognozy pogody",
-        "uk": "додати налаштовувану сітку прогнозу погоди",
-        "zh-cn": "添加可配置的天气预报网格"
-      },
-      "0.2.9": {
-        "en": "add grid request",
-        "de": "Anfrage zum Hinzufügen eines Rasters",
-        "ru": "добавить запрос сетки",
-        "pt": "adicionar solicitação de grade",
-        "nl": "rasterverzoek toevoegen",
-        "fr": "ajouter une demande de grille",
-        "it": "aggiungi richiesta griglia",
-        "es": "agregar solicitud de cuadrícula",
-        "pl": "dodanie żądania siatki",
-        "uk": "запит на додавання сітки",
-        "zh-cn": "添加网格请求"
-      },
       "0.2.8": {
         "en": "reduce read request, static dp read only once",
         "de": "leseanfrage reduzieren, statische dp nur einmal lesen",
@@ -149,7 +123,7 @@
     },
     "globalDependencies": [
       {
-        "admin": ">=7.4.10"
+        "admin": ">=7.6.20"
       }
     ],
     "dependencies": [

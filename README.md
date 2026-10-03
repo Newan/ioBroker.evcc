@@ -37,6 +37,10 @@ Use `loadpoint.X.status.alwaysCharge` or `loadpoint.X.control.pvControl` to dist
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+
+### **WORK IN PROGRESS**
+* (arteck) Dependencies have been updated
+
 ### 0.3.0 (2026-10-02)
 * (Schimi1983) support evcc 0.316 mode redesign: new `control.smart` and `control.alwaysCharge`, `pvControl` reflects the evcc mode
 * (Schimi1983) fix: request timeout was sent as POST body and never applied
