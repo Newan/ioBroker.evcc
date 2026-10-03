@@ -30,6 +30,12 @@ class Evcc extends utils.Adapter {
     private adapterStart = false;
     /** true when evcc >= 0.316.0 (smart + alwaysCharge), detected on every poll */
     private smartModeApi = false;
+    /** Objekte, die in dieser Laufzeit schon angelegt/angepasst wurden: id -> Signatur (Objekt-Typ + State-Typ) */
+    private readonly knownObjects = new Map<string, string>();
+    /** Fahrzeuge, deren Objekte und Subscriptions schon angelegt wurden */
+    private readonly knownVehicles = new Set<string>();
+    /** verhindert überlappende Abfragen, falls evcc langsamer antwortet als das Intervall */
+    private pollRunning = false;
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({
             ...options,
@@ -76,10 +82,10 @@ class Evcc extends utils.Adapter {
         await this.createEvccControl();
         this.adapterStart = false;
 
-        this.getEvccData();
+        void this.getEvccData();
 
         //War alles ok, dann können wir die Daten abholen
-        this.adapterIntervals = this.setInterval(() => this.getEvccData(), this.polltime * 1000);
+        this.adapterIntervals = this.setInterval(() => void this.getEvccData(), this.polltime * 1000);
 
         this.log.debug(`config ip: ${this.config.ip}`);
         this.log.debug(`config polltime: ${this.config.polltime}`);
@@ -343,67 +349,62 @@ class Evcc extends utils.Adapter {
     /**
      * Hole Daten vom EVCC
      */
-    private getEvccData(): void {
+    /**
+     * Holt /api/state von evcc und schreibt alle Werte. Läuft nie parallel zu sich selbst.
+     */
+    private async getEvccData(): Promise<void> {
+        if (this.pollRunning) {
+            this.log.debug('Previous poll still running, skipping this interval');
+            return;
+        }
+        this.pollRunning = true;
         try {
-            this.log.debug(`call: ` + `http://${this.ip}/api/state`);
-            axios(`http://${this.ip}/api/state`, { timeout: this.timeout })
-                .then(async response => {
-                    this.log.debug(`Get-Data from evcc:${JSON.stringify(response.data)}`);
+            this.log.debug(`call: http://${this.ip}/api/state`);
+            const response = await axios(`http://${this.ip}/api/state`, { timeout: this.timeout });
+            this.log.debug(`Get-Data from evcc:${JSON.stringify(response.data)}`);
 
-                    //Global status Items - ohne loadpoints - ohne vehicle
-                    let respData = response.data;
+            //Global status Items - ohne loadpoints - ohne vehicle
+            let respData = response.data;
 
-                    if (Object.prototype.hasOwnProperty.call(response.data, 'result')) {  // https://github.com/evcc-io/evcc/pull/22299
-                        respData = response.data.result;
-                    }
-
-                    if (this.adapterStart) {
-                        respData.eebus = [];
-                        respData.hems = [];
-                        respData.influx = [];
-                        respData.messagingEvents = [];
-                        respData.mqtt = [];
-                        respData.network = [];
-                        respData.sponsor = [];
-                        respData.shm = [];
-                    }
-
-                    this.setStatusEvcc(respData);
-
-                    this.adapterStart = true;
-                    //Laden jeden Ladepunkt einzeln
-                    const tmpListLoadpoints: Loadpoint[] = respData.loadpoints;
-
-                    tmpListLoadpoints.forEach(async (loadpoint, index) => {
-                        await this.setLoadPointdata(loadpoint, index);
-                    });
-
-                    for (const vehicleKey in respData.vehicles) {
-                        const vehicle = respData.vehicles[vehicleKey];
-                        await this.setVehicleData(vehicleKey, vehicle);
-                    }
-
-                    //statistik einzeln ausführen
-                    /*const tmpListVehicle: Vehicle[] = response.data.result.vehicles;
-                tmpListVehicle.forEach(async (vehicle, index) => {
-                    await this.setVehicleData(vehicle, index);
-                });*/
-
-                    this.setState('info.connection', true, true);
-                })
-                .catch(error => {
-                    this.log.error(error.message);
-                    this.setState('info.connection', false, true);
-                });
-        } catch (error: unknown) {
-            this.setState('info.connection', false, true);
-            if (typeof error === 'string') {
-                this.log.error(error);
-            } else if (error instanceof Error) {
-                this.log.error(error.message);
+            if (Object.prototype.hasOwnProperty.call(response.data, 'result')) {
+                // https://github.com/evcc-io/evcc/pull/22299
+                respData = response.data.result;
             }
+
+            if (this.adapterStart) {
+                respData.eebus = [];
+                respData.hems = [];
+                respData.influx = [];
+                respData.messagingEvents = [];
+                respData.mqtt = [];
+                respData.network = [];
+                respData.sponsor = [];
+                respData.shm = [];
+            }
+
+            await this.setStatusEvcc(respData);
+
+            this.adapterStart = true;
+
+            //Laden jeden Ladepunkt einzeln
+            const loadpoints: Loadpoint[] = Array.isArray(respData.loadpoints) ? respData.loadpoints : [];
+            for (const [index, loadpoint] of loadpoints.entries()) {
+                await this.setLoadPointdata(loadpoint, index);
+            }
+
+            for (const [vehicleKey, vehicle] of Object.entries(respData.vehicles ?? {})) {
+                await this.setVehicleData(vehicleKey, vehicle as Vehicle);
+            }
+
+            await this.setStateAsync('info.connection', true, true);
+        } catch (error: any) {
+            this.log.error(error?.message ?? String(error));
+            await this.setStateAsync('info.connection', false, true);
+        } finally {
+            this.pollRunning = false;
         }
     }
+
     async createEvccControl(): Promise<void> {
         //Control Objects und Buttons:
         await this.setObjectNotExistsAsync('control.bufferSoc', {
@@ -481,8 +482,33 @@ class Evcc extends utils.Adapter {
         this.subscribeStates('control.bufferStartSoc');
     }
 
+    /**
+     * Legt ein Objekt nur einmal pro Laufzeit an bzw. passt es an, wenn sich der State-Typ ändert.
+     * Ohne Cache wurde jedes Objekt bei jeder Abfrage gelesen bzw. neu geschrieben.
+     *
+     * @param id Objekt-ID (relativ zur Instanz)
+     * @param obj Objekt-Definition
+     * @param mode notExists: nur anlegen, extend: anlegen oder bei geändertem Typ anpassen
+     */
+    private async ensureObjectOnce(
+        id: string,
+        obj: ioBroker.SettableObject,
+        mode: 'notExists' | 'extend' = 'notExists',
+    ): Promise<void> {
+        const signature = `${obj.type}:${(obj.common as { type?: string })?.type ?? ''}`;
+        if (this.knownObjects.get(id) === signature) {
+            return;
+        }
+        if (mode === 'extend') {
+            await this.extendObjectAsync(id, obj);
+        } else {
+            await this.setObjectNotExistsAsync(id, obj);
+        }
+        this.knownObjects.set(id, signature);
+    }
+
     private async ensureEvccChannel(path: string, name: string): Promise<void> {
-        await this.setObjectNotExists(path, {
+        await this.ensureObjectOnce(path, {
             type: 'channel',
             common: { role: 'value', name },
             native: {},
@@ -491,7 +517,7 @@ class Evcc extends utils.Adapter {
 
     private async ensureEvccState(path: string, name: string, type: string): Promise<void> {
         // @ts-ignore
-        await this.setObjectNotExists(path, {
+        await this.ensureObjectOnce(path, {
             type: 'state',
             common: {
                 role: 'value',
@@ -591,111 +617,63 @@ class Evcc extends utils.Adapter {
      * @param vehicleIndex
      * @param vehicleData
      */
+    /**
+     * Legt die Objekte eines Fahrzeugs an und abonniert die beschreibbaren States (einmal pro Laufzeit).
+     *
+     * @param vehicleIndex Fahrzeugname in evcc (z. B. db:6)
+     */
+    private async createVehicleObjects(vehicleIndex: string): Promise<void> {
+        const base = `vehicle.${vehicleIndex}`;
+        const states: { id: string; common: Partial<ioBroker.StateCommon> }[] = [
+            { id: 'title', common: { name: 'title', type: 'string', write: false, role: 'value' } },
+            { id: 'minSoc', common: { name: 'minSoc', type: 'number', write: true, role: 'value', unit: '%' } },
+            { id: 'limitSoc', common: { name: 'limitSoc', type: 'number', write: true, role: 'value', unit: '%' } },
+            { id: 'plan.active', common: { name: 'active', type: 'boolean', write: true, role: 'value' } },
+            { id: 'plan.planSoc', common: { name: 'planSoc', type: 'number', write: true, role: 'value', unit: '%' } },
+            { id: 'plan.time', common: { name: 'time', type: 'number', write: true, role: 'date' } },
+        ];
+        for (const state of states) {
+            // extendObject: bestehende Objekte aus älteren Versionen werden angeglichen
+            await this.extendObjectAsync(`${base}.${state.id}`, {
+                type: 'state',
+                common: { read: true, ...state.common },
+                native: {},
+            });
+            if (state.common.write) {
+                this.subscribeStates(`${base}.${state.id}`);
+            }
+        }
+    }
+
+    /**
+     * Schreibt die Werte eines Fahrzeugs. Objekte werden nur beim ersten Aufruf angelegt.
+     *
+     * @param vehicleIndex Fahrzeugname in evcc (z. B. db:6)
+     * @param vehicleData Fahrzeugdaten aus /api/state
+     */
     async setVehicleData(vehicleIndex: string, vehicleData: Vehicle): Promise<void> {
         this.log.debug(`Vehicle mit index ${vehicleIndex} gefunden...`);
+        if (!this.knownVehicles.has(vehicleIndex)) {
+            await this.createVehicleObjects(vehicleIndex);
+            this.knownVehicles.add(vehicleIndex);
+        }
+
+        const base = `vehicle.${vehicleIndex}`;
         // evcc liefert den Plan als vehicles[x].plan, ältere Versionen als plans[]
         const firstPlan = vehicleData.plan ?? vehicleData.plans?.[0];
         const planTime = firstPlan?.time ? Date.parse(firstPlan.time) : NaN;
 
-        await this.extendObjectAsync(`vehicle.${vehicleIndex}.title`, {
-            type: 'state',
-            common: {
-                name: 'title',
-                type: 'string',
-                read: true,
-                write: false,
-                role: 'value',
-            },
-            native: {},
-        });
-        await this.setState(`vehicle.${vehicleIndex}.title`, vehicleData.title, true);
+        await this.setStateAsync(`${base}.title`, { val: vehicleData.title ?? '', ack: true });
+        await this.setStateAsync(`${base}.minSoc`, { val: vehicleData.minSoc ?? 0, ack: true });
+        await this.setStateAsync(`${base}.limitSoc`, { val: vehicleData.limitSoc ?? 100, ack: true });
+        await this.setStateAsync(`${base}.plan.active`, { val: firstPlan !== undefined, ack: true });
 
-        await this.extendObjectAsync(`vehicle.${vehicleIndex}.minSoc`, {
-            type: 'state',
-            common: {
-                name: 'minSoc',
-                type: 'number',
-                read: true,
-                write: true,
-                role: 'value',
-                unit: '%',
-            },
-            native: {},
-        });
-        this.subscribeStates(`vehicle.${vehicleIndex}.minSoc`);
-        await this.setStateAsync(`vehicle.${vehicleIndex}.minSoc`, {
-            val: vehicleData.minSoc !== undefined ? vehicleData.minSoc : 0,
-            ack: true,
-        });
-
-        await this.extendObjectAsync(`vehicle.${vehicleIndex}.limitSoc`, {
-            type: 'state',
-            common: {
-                name: 'limitSoc',
-                type: 'number',
-                read: true,
-                write: true,
-                role: 'value',
-                unit: '%',
-            },
-            native: {},
-        });
-        this.subscribeStates(`vehicle.${vehicleIndex}.limitSoc`);
-        await this.setStateAsync(`vehicle.${vehicleIndex}.limitSoc`, {
-            val: vehicleData.limitSoc !== undefined ? vehicleData.limitSoc : 100,
-            ack: true,
-        });
-
-        //Ladeplanung hinzufügen
-        await this.extendObjectAsync(`vehicle.${vehicleIndex}.plan.active`, {
-            type: 'state',
-            common: {
-                name: 'active',
-                type: 'boolean',
-                read: true,
-                write: true,
-                role: 'value',
-            },
-            native: {},
-        });
-        this.subscribeStates(`vehicle.${vehicleIndex}.plan.active`);
-        await this.setStateAsync(`vehicle.${vehicleIndex}.plan.active`, {
-            val: firstPlan !== undefined,
-            ack: true,
-        });
-
-        await this.extendObjectAsync(`vehicle.${vehicleIndex}.plan.planSoc`, {
-            type: 'state',
-            common: {
-                name: 'planSoc',
-                type: 'number',
-                read: true,
-                write: true,
-                role: 'value',
-                unit: '%',
-            },
-            native: {},
-        });
-        this.subscribeStates(`vehicle.${vehicleIndex}.plan.planSoc`);
         // Ohne Plan in evcc vorbereitete Werte (planSoc/time) nicht überschreiben
         if (firstPlan) {
-            await this.setStateAsync(`vehicle.${vehicleIndex}.plan.planSoc`, { val: firstPlan.soc, ack: true });
-        }
-
-        await this.extendObjectAsync(`vehicle.${vehicleIndex}.plan.time`, {
-            type: 'state',
-            common: {
-                name: 'time',
-                type: 'number',
-                read: true,
-                write: true,
-                role: 'date',
-            },
-            native: {},
-        });
-        this.subscribeStates(`vehicle.${vehicleIndex}.plan.time`);
-        if (firstPlan && !Number.isNaN(planTime)) {
-            await this.setStateAsync(`vehicle.${vehicleIndex}.plan.time`, { val: planTime, ack: true });
+            await this.setStateAsync(`${base}.plan.planSoc`, { val: firstPlan.soc, ack: true });
+            if (!Number.isNaN(planTime)) {
+                await this.setStateAsync(`${base}.plan.time`, { val: planTime, ack: true });
+            }
         }
     }
 
@@ -770,7 +748,7 @@ class Evcc extends utils.Adapter {
         }
 
         //Alle Werte unter Status veröffentlichen
-        this.setStatusLoadPoint(loadpoint, index);
+        await this.setStatusLoadPoint(loadpoint, index);
     }
 
     async setStatusLoadPoint(loaddata: any, index: number): Promise<void> {
@@ -788,19 +766,23 @@ class Evcc extends utils.Adapter {
                 lpType = 'string';
             }
 
-            await this.extendObjectAsync(`loadpoint.${index}.status.${lpEntry}`, {
-                type: 'state',
-                common: {
-                    name: lpEntry,
-                    type: lpType,
-                    read: true,
-                    write: false,
-                    role: 'value',
+            await this.ensureObjectOnce(
+                `loadpoint.${index}.status.${lpEntry}`,
+                {
+                    type: 'state',
+                    common: {
+                        name: lpEntry,
+                        type: lpType,
+                        read: true,
+                        write: false,
+                        role: 'value',
+                    },
+                    native: {},
                 },
-                native: {},
-            });
+                'extend',
+            );
 
-            await this.setState(`loadpoint.${index}.status.${lpEntry}`, res, true);
+            await this.setStateAsync(`loadpoint.${index}.status.${lpEntry}`, res, true);
         }
     }
 
