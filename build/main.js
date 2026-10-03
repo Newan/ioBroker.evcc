@@ -506,9 +506,15 @@ class Evcc extends utils.Adapter {
             }
         }
         // evcc lässt nicht gesetzte globale Limits ganz weg -> ohne das bliebe nach dem Löschen der alte Wert stehen
-        for (const limitKey of ['smartCostLimit', 'batteryGridChargeLimit']) {
-            if (!(limitKey in daten)) {
-                await this.setStateAsync(tools_1.EVCC_CONTROL_MAPPING[limitKey], { val: 0, ack: true });
+        if (!('batteryGridChargeLimit' in daten)) {
+            await this.setStateAsync(tools_1.EVCC_CONTROL_MAPPING.batteryGridChargeLimit, { val: 0, ack: true });
+        }
+        // Ein globales smartCostLimit gibt es in /api/state nicht (evcc setzt es je Ladepunkt).
+        // Haben alle Ladepunkte denselben Wert, wird dieser angezeigt, sonst bleibt der State unverändert.
+        if (!('smartCostLimit' in daten) && Array.isArray(daten.loadpoints) && daten.loadpoints.length > 0) {
+            const limits = daten.loadpoints.map(lp => lp.smartCostLimit ?? 0);
+            if (limits.every(limit => limit === limits[0])) {
+                await this.setStateAsync(tools_1.EVCC_CONTROL_MAPPING.smartCostLimit, { val: limits[0], ack: true });
             }
         }
         for (const [lpEntry, lpData] of Object.entries(daten)) {
@@ -619,10 +625,10 @@ class Evcc extends utils.Adapter {
             native: {},
         });
         this.subscribeStates(`vehicle.${vehicleIndex}.plan.planSoc`);
-        await this.setStateAsync(`vehicle.${vehicleIndex}.plan.planSoc`, {
-            val: firstPlan?.soc ?? 0,
-            ack: true,
-        });
+        // Ohne Plan in evcc vorbereitete Werte (planSoc/time) nicht überschreiben
+        if (firstPlan) {
+            await this.setStateAsync(`vehicle.${vehicleIndex}.plan.planSoc`, { val: firstPlan.soc, ack: true });
+        }
         await this.extendObjectAsync(`vehicle.${vehicleIndex}.plan.time`, {
             type: 'state',
             common: {
@@ -635,10 +641,9 @@ class Evcc extends utils.Adapter {
             native: {},
         });
         this.subscribeStates(`vehicle.${vehicleIndex}.plan.time`);
-        await this.setStateAsync(`vehicle.${vehicleIndex}.plan.time`, {
-            val: Number.isNaN(planTime) ? 0 : planTime,
-            ack: true,
-        });
+        if (firstPlan && !Number.isNaN(planTime)) {
+            await this.setStateAsync(`vehicle.${vehicleIndex}.plan.time`, { val: planTime, ack: true });
+        }
     }
     /**
      * Hole Daten für Ladepunkte
