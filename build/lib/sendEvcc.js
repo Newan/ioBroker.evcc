@@ -169,38 +169,6 @@ class SendEvcc {
             this.log.error(`12 ${error.message}`);
         });
     }
-    setEvccsmartCostLimitLoadpoint(index, value) {
-        const numericValue = Number(value);
-        let callUrl = `http://${this.ip}/api/loadpoints/${index}/smartcostlimit`;
-        // Nur Wert anhängen, wenn > 0
-        if (numericValue > 0) {
-            callUrl += `/${numericValue}`;
-        }
-        this.log.debug(`call setEvccsmartCostLimitLoadpoint: ${callUrl}`);
-        axios_1.default.post(callUrl, null, { timeout: this.timeout })
-            .then(() => {
-            this.log.info('Evcc update successful');
-        })
-            .catch(error => {
-            this.log.error(`setEvccsmartCostLimitLoadpoint failed: ${error.message}`);
-        });
-    }
-    setEvccsmartCostLimit(value) {
-        const numericValue = Number(value);
-        let callUrl = `http://${this.ip}/api/smartcostlimit`;
-        // Nur Wert anhängen, wenn > 0
-        if (numericValue > 0) {
-            callUrl += `/${numericValue}`;
-        }
-        this.log.debug(`call setEvccsmartCostLimit: ${callUrl}`);
-        axios_1.default.post(callUrl, null, { timeout: this.timeout })
-            .then(() => {
-            this.log.info('Evcc update successful');
-        })
-            .catch(error => {
-            this.log.error(`setEvccsmartCostLimit failed: ${error.message}`);
-        });
-    }
     setEvccVehicle(index, value) {
         //Wenn der String leer ist, wird es das GAstauto und wir müssen löschen
         if (value == '') {
@@ -281,101 +249,93 @@ class SendEvcc {
             this.log.error(`15 ${error.message}`);
         });
     }
-    setVehiclePlan(vehicleID, active) {
-        if (active) {
-            const currentDate = new Date();
-            // Add one day to the current date
-            currentDate.setDate(currentDate.getDate() + 1);
-            // Convert to ISO 8601 / RFC 3339 format
-            const rfc3339Date = currentDate.toISOString();
-            //Aktvierungsregel:
-            // wenn aktive false => soc = 0% + time = 0
-            // wenn aktive true => soc = 100% + time = nextday, same time
-            // wenn soc > 0 => active = true + time = nextday, same time
-            // wenn soc < 0 => active = false
-            this.log.debug(`call: ` + `http://${this.ip}/api/vehicles/${vehicleID}/plan/soc/100/${rfc3339Date}`);
-            axios_1.default
-                .post(`http://${this.ip}/api/vehicles/${vehicleID}/plan/soc/100/${rfc3339Date}`, null, {
-                timeout: this.timeout,
-            })
-                .then(() => {
-                this.log.info(`Activate plan for verhicle: ${vehicleID}`);
-            })
-                .catch(error => {
-                this.log.error(`Error active plan: ${error.message}`);
-            });
+    /**
+     * Sends a request to evcc and logs the result.
+     *
+     * @param method POST or DELETE
+     * @param path API path below /api/
+     * @param label name for log messages
+     * @returns resolves true on success, false on error (error is logged)
+     */
+    async request(method, path, label) {
+        const url = `http://${this.ip}/api/${path}`;
+        this.log.debug(`call ${method.toUpperCase()}: ${url}`);
+        try {
+            await axios_1.default.request({ method, url, timeout: this.timeout });
+            this.log.info('Evcc update successful');
+            return true;
         }
-        else {
-            this.log.debug(`call: ` + `http://${this.ip}/api/vehicles/${vehicleID}/plan/soc`);
-            axios_1.default
-                .delete(`http://${this.ip}/api/vehicles/${vehicleID}/plan/soc`, { timeout: this.timeout })
-                .then(() => {
-                this.log.info(`Deactivate plan for verhicle: ${vehicleID}`);
-            })
-                .catch(error => {
-                this.log.error(`Error deactive plan: ${error.message}`);
-            });
+        catch (error) {
+            this.log.error(`${label} failed: ${error.message}`);
+            return false;
         }
     }
-    setEvccTargetSoc(index, value) {
-        this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/target/soc/${value}`);
-        axios_1.default
-            .post(`http://${this.ip}/api/loadpoints/${index}/target/soc/${value}`, null, { timeout: this.timeout })
-            .then(() => {
-            this.log.info('Evcc update successful');
-        })
-            .catch(error => {
-            this.log.error(`5 ${error.message}`);
-        });
-    }
-    setEvccMinSoc(index, value) {
-        this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/minsoc/${value}`);
-        axios_1.default
-            .post(`http://${this.ip}/api/loadpoints/${index}/minsoc/${value}`, null, { timeout: this.timeout })
-            .then(() => {
-            this.log.info('Evcc update successful');
-        })
-            .catch(error => {
-            this.log.error(`6 ${error.message}`);
-        });
-    }
-    setEvccSetTargetTime(index, value) {
-        this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/target/time/${value}`);
-        axios_1.default
-            .post(`http://${this.ip}/api/loadpoints/${index}/target/time/${value}`, null, { timeout: this.timeout })
-            .then(() => {
-            this.log.info('Evcc update successful');
-        })
-            .catch(error => {
-            this.log.error(`12 ${error.message}`);
-        });
-    }
-    setEvccDeleteTargetTime(index) {
-        this.log.debug(`call: ` + `http://${this.ip}/api/loadpoints/${index}/target/time`);
-        axios_1.default
-            .delete(`http://${this.ip}/api/loadpoints/${index}/target/time`, { timeout: this.timeout })
-            .then(() => {
-            this.log.info('Evcc update successful');
-        })
-            .catch(error => {
-            this.log.error(`13 ${error.message}`);
-        });
-    }
-    setEvccBatteryGridChargeLimit(value) {
+    /**
+     * Sets or removes a limit: 0 removes it (DELETE), any other number (also negative) sets it (POST).
+     *
+     * @param path API path below /api/ without value
+     * @param value limit value
+     * @param label name for log messages
+     * @returns resolves true on success
+     */
+    async setOrDeleteLimit(path, value, label) {
         const numericValue = Number(value);
-        let callUrl = `http://${this.ip}/api/batterygridchargelimit`;
-        // Nur Wert anhängen, wenn > 0
-        if (numericValue > 0) {
-            callUrl += `/${numericValue}`;
+        if (value === null || value === '' || !Number.isFinite(numericValue)) {
+            this.log.warn(`${label}: invalid value "${String(value)}"`);
+            return false;
         }
-        this.log.debug(`call setEvccBatteryGridChargeLimit: ${callUrl}`);
-        axios_1.default.post(callUrl, null, { timeout: this.timeout })
-            .then(() => {
-            this.log.info('Evcc update successful');
-        })
-            .catch(error => {
-            this.log.error(`setEvccBatteryGridChargeLimit failed: ${error.message}`);
-        });
+        if (numericValue === 0) {
+            return this.request('delete', path, label);
+        }
+        return this.request('post', `${path}/${numericValue}`, label);
+    }
+    /**
+     * Sets the smart cost limit of a loadpoint, 0 removes it.
+     *
+     * @param index loadpoint index (starts with 1)
+     * @param value limit in currency/kWh, 0 = remove
+     * @returns resolves true on success
+     */
+    setEvccsmartCostLimitLoadpoint(index, value) {
+        return this.setOrDeleteLimit(`loadpoints/${index}/smartcostlimit`, value, 'setEvccsmartCostLimitLoadpoint');
+    }
+    /**
+     * Sets the smart cost limit for all loadpoints, 0 removes it.
+     *
+     * @param value limit in currency/kWh, 0 = remove
+     * @returns resolves true on success
+     */
+    setEvccsmartCostLimit(value) {
+        return this.setOrDeleteLimit('smartcostlimit', value, 'setEvccsmartCostLimit');
+    }
+    /**
+     * Sets the battery grid charge limit, 0 removes it.
+     *
+     * @param value limit in currency/kWh, 0 = remove
+     * @returns resolves true on success
+     */
+    setEvccBatteryGridChargeLimit(value) {
+        return this.setOrDeleteLimit('batterygridchargelimit', value, 'setEvccBatteryGridChargeLimit');
+    }
+    /**
+     * Creates or replaces the soc charging plan of a vehicle.
+     *
+     * @param vehicleID vehicle name as used by evcc (e.g. db:6)
+     * @param soc target soc in %
+     * @param time target time
+     * @returns resolves true on success
+     */
+    setVehiclePlan(vehicleID, soc, time) {
+        return this.request('post', `vehicles/${vehicleID}/plan/soc/${soc}/${time.toISOString()}`, 'setVehiclePlan');
+    }
+    /**
+     * Deletes the soc charging plan of a vehicle.
+     *
+     * @param vehicleID vehicle name as used by evcc (e.g. db:6)
+     * @returns resolves true on success
+     */
+    deleteVehiclePlan(vehicleID) {
+        return this.request('delete', `vehicles/${vehicleID}/plan/soc`, 'deleteVehiclePlan');
     }
 }
 exports.SendEvcc = SendEvcc;

@@ -31,5 +31,5 @@ export interface Loadpoint {
     disableThreshold: number;
     limitSoc: number;
     vehicleName: string;
-    smartCostLimit: number; // 0
+    smartCostLimit: number | null; // null = no limit
 }

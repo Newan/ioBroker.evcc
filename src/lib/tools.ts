@@ -8,6 +8,27 @@ export const EVCC_CONTROL_MAPPING: Readonly<Record<string, string>> = {
     batteryGridChargeLimit: 'control.batteryGridChargeLimit',
 };
 
+/** evcc reports "no value" durations as max int64 nanoseconds, converted to seconds */
+const EVCC_DURATION_UNSET = 9223372036;
+
+/**
+ * Formats an evcc duration (seconds) as [dd:]hh:mm:ss.
+ *
+ * @param seconds duration in seconds as reported by evcc /api/state
+ * @returns formatted duration, empty string for null/invalid/unset values
+ */
+export function formatDuration(seconds: unknown): string {
+    const total = Number(seconds);
+    if (seconds === null || seconds === undefined || !Number.isFinite(total) || total < 0 || total >= EVCC_DURATION_UNSET) {
+        return '';
+    }
+    const s = Math.round(total);
+    const days = Math.floor(s / 86400);
+    const pad = (n: number): string => String(n).padStart(2, '0');
+    const hms = `${pad(Math.floor((s % 86400) / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
+    return days > 0 ? `${pad(days)}:${hms}` : hms;
+}
+
 export function isIgnoredEvccEntry(entry: string): boolean {
     return ['result', 'vehicles', 'loadpoints', 'feedin', 'planer', 'planner', 'forecast'].includes(entry);
 }
