@@ -164,7 +164,8 @@ class Evcc extends utils.Adapter {
         // --- Helper: Logging + Funktionsaufruf ---
         const doAction = (msg, fn, ...args) => {
             this.log.info(`${msg}${index !== undefined ? ` on loadpointindex: ${index}` : ''}`);
-            fn.apply(this, args);
+            // an die SendEvcc-Instanz binden (vorher: Adapter-Instanz, funktionierte nur zufällig über gleichnamige Felder)
+            fn.apply(this.evcc, args);
         };
         // --- Fahrzeug-bezogene Gruppen ---
         // vehicle.<name>.<action> (5 Teile) bzw. vehicle.<name>.plan.<action> (6 Teile)
@@ -502,6 +503,12 @@ class Evcc extends utils.Adapter {
             }
             else {
                 await this.writeEvccState('status.forecast', 'forecast', forecastData);
+            }
+        }
+        // evcc lässt nicht gesetzte globale Limits ganz weg -> ohne das bliebe nach dem Löschen der alte Wert stehen
+        for (const limitKey of ['smartCostLimit', 'batteryGridChargeLimit']) {
+            if (!(limitKey in daten)) {
+                await this.setStateAsync(tools_1.EVCC_CONTROL_MAPPING[limitKey], { val: 0, ack: true });
             }
         }
         for (const [lpEntry, lpData] of Object.entries(daten)) {

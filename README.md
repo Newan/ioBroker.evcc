@@ -46,6 +46,7 @@ Use `loadpoint.X.status.alwaysCharge` or `loadpoint.X.control.pvControl` to dist
 * (Schimi1983) fix: `chargeDuration` / `connectedDuration` are reported by evcc in seconds (were treated as nanoseconds)
 * (Schimi1983) fix: vehicle plan (`plan.active`, `plan.planSoc`, `plan.time`) is read from and written to evcc again
 * (Schimi1983) remove unused calls to removed evcc endpoints
+* (Schimi1983) fix: control actions were called with the adapter as `this` instead of the evcc client
 
 ### 0.3.0 (2026-10-02)
 * (Schimi1983) support evcc 0.316 mode redesign: new `control.smart` and `control.alwaysCharge`, `pvControl` reflects the evcc mode
