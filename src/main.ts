@@ -8,6 +8,7 @@ import {
     isIgnoredEvccEntry,
 } from './lib/tools';
 import type { Loadpoint } from './lib/loadpoint';
+import { currencySymbol, getFieldMeta } from './lib/units';
 import type { Vehicle } from './lib/vehicle';
 import { SendEvcc } from './lib/sendEvcc';
 import {
@@ -36,6 +37,8 @@ class Evcc extends utils.Adapter {
     private readonly knownVehicles = new Set<string>();
     /** verhindert überlappende Abfragen, falls evcc langsamer antwortet als das Intervall */
     private pollRunning = false;
+    /** Währungssymbol aus evcc (für Preis-Einheiten) */
+    private currency = '€';
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({
             ...options,
@@ -421,7 +424,8 @@ class Evcc extends utils.Adapter {
         });
         this.subscribeStates('control.bufferSoc');
 
-        await this.setObjectNotExistsAsync('control.smartCostLimit', {
+        // extendObject: Einheit €/kWh auch bei bestehenden Installationen setzen
+        await this.extendObjectAsync('control.smartCostLimit', {
             type: 'state',
             common: {
                 name: 'smartCostLimit 0 = delete',
@@ -430,22 +434,22 @@ class Evcc extends utils.Adapter {
                 read: true,
                 write: true,
                 def: 0,
-                unit: '€',
+                unit: '€/kWh',
             },
             native: {},
         });
         this.subscribeStates('control.smartCostLimit');
 
-        await this.setObjectNotExistsAsync(`control.batteryGridChargeLimit`, {
+        await this.extendObjectAsync(`control.batteryGridChargeLimit`, {
             type: 'state',
             common: {
-                name: 'batteryGridChargeLimit',
+                name: 'batteryGridChargeLimit 0 = delete',
                 type: 'number',
                 role: 'value',
                 read: true,
                 write: true,
                 def: 0,
-                unit: '€',
+                unit: '€/kWh',
             },
             native: {},
         });
@@ -515,19 +519,31 @@ class Evcc extends utils.Adapter {
         });
     }
 
+    /**
+     * Legt einen read-only Status-State an (einmal pro Laufzeit), inkl. Einheit und Rolle bekannter evcc-Felder.
+     *
+     * @param path State-ID (relativ zur Instanz)
+     * @param name Feldname aus evcc
+     * @param type typeof des Werts
+     */
     private async ensureEvccState(path: string, name: string, type: string): Promise<void> {
-        // @ts-ignore
-        await this.ensureObjectOnce(path, {
-            type: 'state',
-            common: {
-                role: 'value',
-                name,
-                type,
-                read: true,
-                write: false,
+        const meta = getFieldMeta(name, type, this.currency);
+        await this.ensureObjectOnce(
+            path,
+            {
+                type: 'state',
+                common: {
+                    role: meta.role,
+                    name,
+                    type: type as ioBroker.CommonType,
+                    read: true,
+                    write: false,
+                    ...(meta.unit ? { unit: meta.unit } : {}),
+                },
+                native: {},
             },
-            native: {},
-        });
+            'extend',
+        );
     }
 
     private async writeEvccState(path: string, name: string, value: any): Promise<void> {
@@ -560,6 +576,8 @@ class Evcc extends utils.Adapter {
     }
 
     async setStatusEvcc(daten: any): Promise<void> {
+        this.currency = currencySymbol(daten.currency);
+
         // Handle forecast conditionally when weatherForecast is enabled
         if (this.config.weatherForecast && daten.forecast && !isEmptyEvccValue(daten.forecast)) {
             const forecastData = daten.forecast;
@@ -766,6 +784,7 @@ class Evcc extends utils.Adapter {
                 lpType = 'string';
             }
 
+            const meta = getFieldMeta(lpEntry, lpType, this.currency);
             await this.ensureObjectOnce(
                 `loadpoint.${index}.status.${lpEntry}`,
                 {
@@ -775,7 +794,8 @@ class Evcc extends utils.Adapter {
                         type: lpType,
                         read: true,
                         write: false,
-                        role: 'value',
+                        role: meta.role,
+                        ...(meta.unit ? { unit: meta.unit } : {}),
                     },
                     native: {},
                 },
@@ -893,7 +913,8 @@ class Evcc extends utils.Adapter {
         });
         this.subscribeStates(`loadpoint.${index}.control.pvControl`);
 
-        await this.setObjectNotExistsAsync(`loadpoint.${index}.control.maxCurrent`, {
+        // extendObject: Einheit auch bei bestehenden Installationen ergänzen
+        await this.extendObjectAsync(`loadpoint.${index}.control.maxCurrent`, {
             type: 'state',
             common: {
                 name: 'maxCurrent',
@@ -901,12 +922,14 @@ class Evcc extends utils.Adapter {
                 role: 'value.max',
                 read: true,
                 write: true,
+                unit: 'A',
             },
             native: {},
         });
         this.subscribeStates(`loadpoint.${index}.control.maxCurrent`);
 
-        await this.setObjectNotExistsAsync(`loadpoint.${index}.control.minCurrent`, {
+        // extendObject: Einheit auch bei bestehenden Installationen ergänzen
+        await this.extendObjectAsync(`loadpoint.${index}.control.minCurrent`, {
             type: 'state',
             common: {
                 name: 'minCurrent',
@@ -914,6 +937,7 @@ class Evcc extends utils.Adapter {
                 role: 'value',
                 read: true,
                 write: true,
+                unit: 'A',
             },
             native: {},
         });
@@ -933,7 +957,7 @@ class Evcc extends utils.Adapter {
         this.subscribeStates(`loadpoint.${index}.control.phasesConfigured`);
 
 
-        await this.setObjectNotExistsAsync(`loadpoint.${index}.control.smartCostLimit`, {
+        await this.extendObjectAsync(`loadpoint.${index}.control.smartCostLimit`, {
             type: 'state',
             common: {
                 name: 'smartCostLimit 0 = delete',
@@ -942,13 +966,14 @@ class Evcc extends utils.Adapter {
                 read: true,
                 write: true,
                 def: 0,
-                unit: '€',
+                unit: '€/kWh',
             },
             native: {},
         });
         this.subscribeStates(`loadpoint.${index}.control.smartCostLimit`);
 
-        await this.setObjectNotExistsAsync(`loadpoint.${index}.control.enableThreshold`, {
+        // extendObject: Einheit auch bei bestehenden Installationen ergänzen
+        await this.extendObjectAsync(`loadpoint.${index}.control.enableThreshold`, {
             type: 'state',
             common: {
                 name: 'enableThreshold',
@@ -956,12 +981,14 @@ class Evcc extends utils.Adapter {
                 role: 'value',
                 read: true,
                 write: true,
+                unit: 'W',
             },
             native: {},
         });
         this.subscribeStates(`loadpoint.${index}.control.enableThreshold`);
 
-        await this.setObjectNotExistsAsync(`loadpoint.${index}.control.disableThreshold`, {
+        // extendObject: Einheit auch bei bestehenden Installationen ergänzen
+        await this.extendObjectAsync(`loadpoint.${index}.control.disableThreshold`, {
             type: 'state',
             common: {
                 name: 'disableThreshold',
@@ -969,6 +996,7 @@ class Evcc extends utils.Adapter {
                 role: 'value',
                 read: true,
                 write: true,
+                unit: 'W',
             },
             native: {},
         });
