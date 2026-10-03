@@ -2,6 +2,7 @@ import * as utils from '@iobroker/adapter-core';
 import axios from 'axios';
 import {
     EVCC_CONTROL_MAPPING,
+    formatDuration,
     formatEvccPathEntry,
     isEmptyEvccValue,
     isIgnoredEvccEntry,
@@ -158,22 +159,36 @@ class Evcc extends utils.Adapter {
         // --- Helper: Logging + Funktionsaufruf ---
         const doAction = (msg: string, fn: (...args: any[]) => void, ...args: any[]): void => {
             this.log.info(`${msg}${index !== undefined ? ` on loadpointindex: ${index}` : ''}`);
-            fn.apply(this, args);
+            // an die SendEvcc-Instanz binden (vorher: Adapter-Instanz, funktionierte nur zufällig über gleichnamige Felder)
+            fn.apply(this.evcc, args);
         };
 
         // --- Fahrzeug-bezogene Gruppen ---
-        if (group === 'vehicle' || group === 'plan') {
+        // vehicle.<name>.<action> (5 Teile) bzw. vehicle.<name>.plan.<action> (6 Teile)
+        if (group === 'vehicle') {
             const vehicleMap: Record<string, () => void> = {
                 minSoc: () => this.evcc.setVehicleMinSoc(index, Number(val)),
                 limitSoc: () => this.evcc.setVehicleLimitSoc(index, Number(val)),
-                plan: () => {
-                    if (action === 'active') {
-                        this.log.info(`Set plan.active on vehicle: ${index} to ${val}`);
-                        this.evcc.setVehiclePlan(index, Boolean(val));
-                    }
-                },
             };
             return vehicleMap[action]?.();
+        }
+        if (group === 'plan' && idParts[2] === 'vehicle') {
+            void this.handleVehiclePlan(index, action, val);
+            return;
+        }
+
+        // --- EVCC-Root-Werte (control.<action>, kein Index) ---
+        if (index === undefined) {
+            const evccRootMap: Record<string, () => void> = {
+                bufferSoc: () => this.evcc.setEvccBufferSoc(Number(val)),
+                bufferStartSoc: () => this.evcc.setEvccBufferStartSoc(Number(val)),
+                prioritySoc: () => this.evcc.setEvccPrioritySoc(Number(val)),
+                smartCostLimit: () => void this.evcc.setEvccsmartCostLimit(Number(val)),
+                batteryGridChargeLimit: () => void this.evcc.setEvccBatteryGridChargeLimit(Number(val)),
+            };
+            if (evccRootMap[action]) {
+                return evccRootMap[action]();
+            }
         }
 
         // --- pvControl separat behandeln ---
@@ -199,8 +214,8 @@ class Evcc extends utils.Adapter {
             minCurrent: () => doAction('Set minCurrent', this.evcc.setEvccMinCurrent, index, val),
             maxCurrent: () => doAction('Set maxCurrent', this.evcc.setEvccMaxCurrent, index, val),
             phasesConfigured: () => doAction('Set phasesConfigured', this.evcc.setEvccPhases, index, val),
-            disable_threshold: () => doAction('Set disable threshold', this.evcc.setEvccDisableThreshold, index, val),
-            enable_threshold: () => doAction('Set enable threshold', this.evcc.setEvccEnableThreshold, index, val),
+            disableThreshold: () => doAction('Set disable threshold', this.evcc.setEvccDisableThreshold, index, val),
+            enableThreshold: () => doAction('Set enable threshold', this.evcc.setEvccEnableThreshold, index, val),
             limitSoc: () => doAction('Set limitSoc', this.evcc.setEvccLimitSoc, index, Number(val)),
             vehicleName: () => doAction('Set vehicleName', this.evcc.setEvccVehicle, index, val),
             smartCostLimit: () =>
@@ -208,27 +223,63 @@ class Evcc extends utils.Adapter {
         };
 
         // --- Wenn direkte Aktion existiert ---
-        if (actionMap[action]) {
+        if (index !== undefined && actionMap[action]) {
             return actionMap[action]();
-        }
-
-        // --- EVCC-Root-Werte ---
-        const evccRootMap: Record<string, () => void> = {
-            bufferSoc: () => this.evcc.setEvccBufferSoc(Number(val)),
-            bufferStartSoc: () => this.evcc.setEvccBufferStartSoc(Number(val)),
-            prioritySoc: () => this.evcc.setEvccPrioritySoc(Number(val)),
-            smartCostLimit: () => this.evcc.setEvccsmartCostLimit(Number(val)),
-            batteryGridChargeLimit: () => this.evcc.setEvccBatteryGridChargeLimit(Number(val)),
-        };
-
-        // Bei Root-Werten steckt der "Schlüssel" im 4. Segment (index-Variable ist dann undefined)
-        if (index === undefined && evccRootMap[action]) {
-            return evccRootMap[action]();
         }
 
         // --- Fallback ---
         this.log.debug(JSON.stringify(idParts));
         this.log.warn(`Unhandled state change: ${id} -> ${val}`);
+    }
+
+    /**
+     * Handles writes to vehicle.<name>.plan.(active|planSoc|time).
+     * active=true creates a plan from planSoc (default 100 %) and time (default now + 24 h),
+     * active=false deletes it. planSoc/time update an active plan, otherwise they are only stored.
+     *
+     * @param vehicle vehicle name as used by evcc (e.g. db:6)
+     * @param action active | planSoc | time
+     * @param val written value
+     */
+    private async handleVehiclePlan(
+        vehicle: string | undefined,
+        action: string,
+        val: ioBroker.StateValue,
+    ): Promise<void> {
+        if (vehicle === undefined) {
+            this.log.warn('Cannot set plan: missing vehicle name');
+            return;
+        }
+        const base = `vehicle.${vehicle}.plan`;
+
+        if (action === 'active' && !val) {
+            this.log.info(`Delete plan on vehicle: ${vehicle}`);
+            await this.evcc.deleteVehiclePlan(vehicle);
+            return;
+        }
+        if (action !== 'active' && action !== 'planSoc' && action !== 'time') {
+            this.log.warn(`Unhandled plan state: ${base}.${action}`);
+            return;
+        }
+
+        const activeState = await this.getStateAsync(`${base}.active`);
+        const socState = await this.getStateAsync(`${base}.planSoc`);
+        const timeState = await this.getStateAsync(`${base}.time`);
+
+        const soc = Number(action === 'planSoc' ? val : socState?.val);
+        const time = Number(action === 'time' ? val : timeState?.val);
+        const active = action === 'active' ? true : activeState?.val === true;
+
+        if (!active) {
+            // Plan nicht aktiv: Wert nur übernehmen, wird beim Aktivieren verwendet
+            await this.setStateAsync(`${base}.${action}`, { val, ack: true });
+            return;
+        }
+
+        const planSoc = soc > 0 && soc <= 100 ? soc : 100;
+        const planTime = time > Date.now() ? new Date(time) : new Date(Date.now() + 24 * 3600 * 1000);
+        this.log.info(`Set plan on vehicle: ${vehicle} to ${planSoc} % at ${planTime.toISOString()}`);
+        await this.evcc.setVehiclePlan(vehicle, planSoc, planTime);
     }
 
     /**
@@ -495,14 +546,28 @@ class Evcc extends utils.Adapter {
             }
         }
 
+        // evcc lässt nicht gesetzte globale Limits ganz weg -> ohne das bliebe nach dem Löschen der alte Wert stehen
+        if (!('batteryGridChargeLimit' in daten)) {
+            await this.setStateAsync(EVCC_CONTROL_MAPPING.batteryGridChargeLimit, { val: 0, ack: true });
+        }
+        // Ein globales smartCostLimit gibt es in /api/state nicht (evcc setzt es je Ladepunkt).
+        // Haben alle Ladepunkte denselben Wert, wird dieser angezeigt, sonst bleibt der State unverändert.
+        if (!('smartCostLimit' in daten) && Array.isArray(daten.loadpoints) && daten.loadpoints.length > 0) {
+            const limits = (daten.loadpoints as Loadpoint[]).map(lp => lp.smartCostLimit ?? 0);
+            if (limits.every(limit => limit === limits[0])) {
+                await this.setStateAsync(EVCC_CONTROL_MAPPING.smartCostLimit, { val: limits[0], ack: true });
+            }
+        }
+
         for (const [lpEntry, lpData] of Object.entries(daten)) {
-            if (isIgnoredEvccEntry(lpEntry) || isEmptyEvccValue(lpData)) {
+            if (EVCC_CONTROL_MAPPING[lpEntry]) {
+                // null = kein Limit gesetzt -> 0 (entspricht "0 = delete"), daher vor der Leer-Prüfung
+                // @ts-ignore
+                this.setState(EVCC_CONTROL_MAPPING[lpEntry], { val: lpData ?? 0, ack: true });
                 continue;
             }
 
-            if (EVCC_CONTROL_MAPPING[lpEntry]) {
-                // @ts-ignore
-                this.setState(EVCC_CONTROL_MAPPING[lpEntry], { val: lpData, ack: true });
+            if (isIgnoredEvccEntry(lpEntry) || isEmptyEvccValue(lpData)) {
                 continue;
             }
 
@@ -528,7 +593,9 @@ class Evcc extends utils.Adapter {
      */
     async setVehicleData(vehicleIndex: string, vehicleData: Vehicle): Promise<void> {
         this.log.debug(`Vehicle mit index ${vehicleIndex} gefunden...`);
-        const firstPlan = vehicleData.plans?.[0];
+        // evcc liefert den Plan als vehicles[x].plan, ältere Versionen als plans[]
+        const firstPlan = vehicleData.plan ?? vehicleData.plans?.[0];
+        const planTime = firstPlan?.time ? Date.parse(firstPlan.time) : NaN;
 
         await this.extendObjectAsync(`vehicle.${vehicleIndex}.title`, {
             type: 'state',
@@ -610,10 +677,10 @@ class Evcc extends utils.Adapter {
             native: {},
         });
         this.subscribeStates(`vehicle.${vehicleIndex}.plan.planSoc`);
-        await this.setStateAsync(`vehicle.${vehicleIndex}.plan.planSoc`, {
-            val: firstPlan?.soc ?? 0,
-            ack: true,
-        });
+        // Ohne Plan in evcc vorbereitete Werte (planSoc/time) nicht überschreiben
+        if (firstPlan) {
+            await this.setStateAsync(`vehicle.${vehicleIndex}.plan.planSoc`, { val: firstPlan.soc, ack: true });
+        }
 
         await this.extendObjectAsync(`vehicle.${vehicleIndex}.plan.time`, {
             type: 'state',
@@ -627,10 +694,9 @@ class Evcc extends utils.Adapter {
             native: {},
         });
         this.subscribeStates(`vehicle.${vehicleIndex}.plan.time`);
-        await this.setStateAsync(`vehicle.${vehicleIndex}.plan.time`, {
-            val: firstPlan?.time ?? 0,
-            ack: true,
-        });
+        if (firstPlan && !Number.isNaN(planTime)) {
+            await this.setStateAsync(`vehicle.${vehicleIndex}.plan.time`, { val: planTime, ack: true });
+        }
     }
 
     /**
@@ -674,7 +740,7 @@ class Evcc extends utils.Adapter {
         });
 
         await this.setStateAsync(`loadpoint.${index}.control.smartCostLimit`, {
-            val: loadpoint.smartCostLimit,
+            val: loadpoint.smartCostLimit ?? 0,
             ack: true,
         });
 
@@ -718,7 +784,7 @@ class Evcc extends utils.Adapter {
             }
 
             if (lpEntry === 'chargeDuration' || lpEntry === 'connectedDuration') {
-                res = this.changeMiliSeconds(res);
+                res = formatDuration(res);
                 lpType = 'string';
             }
 
@@ -952,41 +1018,6 @@ class Evcc extends utils.Adapter {
             native: {},
         });
         this.subscribeStates(`loadpoint.${index}.control.vehicleName`);
-    }
-
-    private changeMiliSeconds(nanoseconds: number): string {
-        const secondsG: number = nanoseconds / 1000000000;
-
-        const days: number = Math.floor(secondsG / (24 * 3600));
-        const hours: number = Math.floor((secondsG % (24 * 3600)) / 3600);
-        const minutes: number = Math.floor((secondsG % 3600) / 60);
-        const seconds: number = Math.round(secondsG % 60);
-
-        let daysR: string = days.toString();
-        let hoursR: string = hours.toString();
-        let minutesR: string = minutes.toString();
-        let secondsR: string = seconds.toString();
-
-        if (days < 10) {
-            daysR = `0${days}`;
-        }
-
-        if (hours < 10) {
-            hoursR = `0${hours}`;
-        }
-
-        if (minutes < 10) {
-            minutesR = `0${minutes}`;
-        }
-
-        if (seconds < 10) {
-            secondsR = `0${seconds}`;
-        }
-
-        if (days > 0) {
-            return `${daysR}:${hoursR}:${minutesR}:${secondsR}`;
-        }
-        return `${hoursR}:${minutesR}:${secondsR}`;
     }
 
 }
