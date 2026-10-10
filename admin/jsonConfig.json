@@ -1,4 +1,4 @@
- {
+{
   "i18n": true,
   "type": "tabs",
   "items": {
@@ -18,7 +18,7 @@
           "lg": 4,
           "xl": 4
         },
-        "dissolveObjects":  {
+        "dissolveObjects": {
           "newLine": true,
           "type": "checkbox",
           "label": "dissolveObjects",
@@ -28,7 +28,7 @@
           "md": 6,
           "lg": 4,
           "xl": 4
-         },
+        },
         "ip": {
           "newLine": true,
           "type": "text",
@@ -56,7 +56,7 @@
           "type": "divider",
           "color": "secondary"
         },
-        "weatherForecast":  {
+        "weatherForecast": {
           "newLine": true,
           "type": "checkbox",
           "label": "Weather Forecast",
@@ -66,7 +66,7 @@
           "md": 6,
           "lg": 4,
           "xl": 4
-         }
+        }
       }
     }
   }

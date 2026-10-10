@@ -359,4 +359,30 @@ export class SendEvcc {
     deleteVehiclePlan(vehicleID: string): Promise<boolean> {
         return this.request('delete', `vehicles/${vehicleID}/plan/soc`, 'deleteVehiclePlan');
     }
+
+    /**
+     * Creates or replaces the energy plan of a loadpoint (vehicle without soc / guest vehicle).
+     *
+     * @param index loadpoint index (starts with 1)
+     * @param energy target energy in kWh
+     * @param time target time
+     * @returns resolves true on success
+     */
+    setLoadpointEnergyPlan(index: string, energy: number, time: Date): Promise<boolean> {
+        return this.request(
+            'post',
+            `loadpoints/${index}/plan/energy/${energy}/${time.toISOString()}`,
+            'setLoadpointEnergyPlan',
+        );
+    }
+
+    /**
+     * Deletes the energy plan of a loadpoint.
+     *
+     * @param index loadpoint index (starts with 1)
+     * @returns resolves true on success
+     */
+    deleteLoadpointEnergyPlan(index: string): Promise<boolean> {
+        return this.request('delete', `loadpoints/${index}/plan/energy`, 'deleteLoadpointEnergyPlan');
+    }
 }
