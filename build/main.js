@@ -40,8 +40,11 @@ const utils = __importStar(require("@iobroker/adapter-core"));
 const axios_1 = __importDefault(require("axios"));
 const tools_1 = require("./lib/tools");
 const units_1 = require("./lib/units");
+const plan_1 = require("./lib/plan");
 const sendEvcc_1 = require("./lib/sendEvcc");
 const mode_1 = require("./lib/mode");
+/** Anzahl gleichzeitiger setState-Aufrufe beim Schreiben einer Abfrage */
+const WRITE_CONCURRENCY = 50;
 class Evcc extends utils.Adapter {
     ip = '';
     polltime = 0;
@@ -60,6 +63,8 @@ class Evcc extends utils.Adapter {
     pollRunning = false;
     /** Währungssymbol aus evcc (für Preis-Einheiten) */
     currency = '€';
+    /** true sobald der Adapter beendet wird: laufende Abfrage schreibt nichts mehr */
+    stopping = false;
     constructor(options = {}) {
         super({
             ...options,
@@ -113,12 +118,38 @@ class Evcc extends utils.Adapter {
      * @param callback
      */
     onUnload(callback) {
+        this.stopping = true;
         try {
-            clearInterval(this.adapterIntervals);
+            this.clearInterval(this.adapterIntervals);
             callback();
         }
         catch {
             callback();
+        }
+    }
+    /**
+     * Schreibt gesammelte Werte gebündelt (bis zu WRITE_CONCURRENCY gleichzeitig) mit ack = true.
+     * Einzelnes Abwarten jedes Werts machte eine Abfrage mit vielen States (z. B. Wettervorhersage)
+     * länger als das Abfrageintervall.
+     *
+     * @param writes gesammelte State-Werte
+     */
+    async flushStates(writes) {
+        // Felder, die evcc nicht liefert (undefined), nicht schreiben
+        const valid = writes.filter(w => w.val !== undefined);
+        let failed = 0;
+        for (let i = 0; i < valid.length && !this.stopping; i += WRITE_CONCURRENCY) {
+            // allSettled: ein einzelner fehlerhafter State bricht nicht die ganze Abfrage ab
+            const results = await Promise.allSettled(valid.slice(i, i + WRITE_CONCURRENCY).map(w => this.setStateAsync(w.id, { val: w.val, ack: true })));
+            results.forEach((result, j) => {
+                if (result.status === 'rejected') {
+                    failed++;
+                    this.log.debug(`setState ${valid[i + j].id} failed: ${String(result.reason)}`);
+                }
+            });
+        }
+        if (failed > 0 && !this.stopping) {
+            this.log.warn(`${failed} state(s) could not be written in this poll (details in debug log)`);
         }
     }
     /**
@@ -140,6 +171,12 @@ class Evcc extends utils.Adapter {
         // 4 Teile: <adapter>.<instance>.<channel>.<action>
         // 5 Teile: <adapter>.<instance>.<channel>.<index>.<action>
         // 6 Teile: <adapter>.<instance>.<channel>.<index>.<group>.<action>
+        // 7 Teile: <adapter>.<instance>.loadpoint.<index>.control.plan.<action> (Ladeplan am Ladepunkt, Issue #73)
+        if (idParts.length === 7 && idParts[2] === 'loadpoint' && idParts[4] === 'control' && idParts[5] === 'plan') {
+            this.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
+            void this.handleLoadpointPlan(idParts[3], idParts[6], state.val);
+            return;
+        }
         let index;
         let group;
         let action;
@@ -279,6 +316,58 @@ class Evcc extends utils.Adapter {
         await this.evcc.setVehiclePlan(vehicle, planSoc, planTime);
     }
     /**
+     * Handles writes to loadpoint.<index>.control.plan.(active|time|soc|energy) (issue #73).
+     * With a vehicle assigned to the loadpoint the soc plan of that vehicle is set,
+     * otherwise the energy plan of the loadpoint (vehicle without soc / guest vehicle).
+     * Values written while no plan is active are only stored and used on activation.
+     *
+     * @param index loadpoint index (starts with 1)
+     * @param action active | time | soc | energy
+     * @param val written value
+     */
+    async handleLoadpointPlan(index, action, val) {
+        const base = `loadpoint.${index}.control.plan`;
+        if (!['active', 'time', 'soc', 'energy'].includes(action)) {
+            this.log.warn(`Unhandled plan state: ${base}.${action}`);
+            return;
+        }
+        const vehicleState = await this.getStateAsync(`loadpoint.${index}.control.vehicleName`);
+        const vehicleName = typeof vehicleState?.val === 'string' ? vehicleState.val : '';
+        const useVehicle = vehicleName !== '' && this.knownVehicles.has(vehicleName);
+        if (action === 'active' && !val) {
+            this.log.info(`Delete plan on loadpointindex: ${index}${useVehicle ? ` (vehicle ${vehicleName})` : ''}`);
+            if (useVehicle) {
+                await this.evcc.deleteVehiclePlan(vehicleName);
+            }
+            else {
+                await this.evcc.deleteLoadpointEnergyPlan(index);
+            }
+            return;
+        }
+        const read = async (key) => Number(action === key ? val : (await this.getStateAsync(`${base}.${key}`))?.val);
+        const active = action === 'active' ? true : (await this.getStateAsync(`${base}.active`))?.val === true;
+        if (!active) {
+            // Plan nicht aktiv: Wert nur übernehmen, wird beim Aktivieren verwendet
+            await this.setStateAsync(`${base}.${action}`, { val, ack: true });
+            return;
+        }
+        const time = (0, plan_1.planTimeOrDefault)(await read('time'));
+        if (useVehicle) {
+            const soc = await read('soc');
+            const planSoc = soc > 0 && soc <= 100 ? soc : 100;
+            this.log.info(`Set plan on loadpointindex: ${index} (vehicle ${vehicleName}) to ${planSoc} % at ${time.toISOString()}`);
+            await this.evcc.setVehiclePlan(vehicleName, planSoc, time);
+            return;
+        }
+        const energy = await read('energy');
+        if (!(energy > 0)) {
+            this.log.warn(`Cannot set energy plan on loadpointindex: ${index}: ${base}.energy must be > 0 kWh`);
+            return;
+        }
+        this.log.info(`Set energy plan on loadpointindex: ${index} to ${energy} kWh at ${time.toISOString()}`);
+        await this.evcc.setLoadpointEnergyPlan(index, energy, time);
+    }
+    /**
      * Sets the charge mode of a loadpoint, using the API of the detected evcc version.
      * evcc < 0.316.0: smart is sent as pv, smart + alwaysCharge on as minpv.
      * evcc >= 0.316.0: mode and alwaysCharge are sent separately.
@@ -335,11 +424,15 @@ class Evcc extends utils.Adapter {
      * Holt /api/state von evcc und schreibt alle Werte. Läuft nie parallel zu sich selbst.
      */
     async getEvccData() {
+        if (this.stopping) {
+            return;
+        }
         if (this.pollRunning) {
             this.log.debug('Previous poll still running, skipping this interval');
             return;
         }
         this.pollRunning = true;
+        const pollStart = Date.now();
         try {
             this.log.debug(`call: http://${this.ip}/api/state`);
             const response = await (0, axios_1.default)(`http://${this.ip}/api/state`, { timeout: this.timeout });
@@ -365,14 +458,21 @@ class Evcc extends utils.Adapter {
             //Laden jeden Ladepunkt einzeln
             const loadpoints = Array.isArray(respData.loadpoints) ? respData.loadpoints : [];
             for (const [index, loadpoint] of loadpoints.entries()) {
-                await this.setLoadPointdata(loadpoint, index);
+                await this.setLoadPointdata(loadpoint, index, respData.vehicles);
             }
             for (const [vehicleKey, vehicle] of Object.entries(respData.vehicles ?? {})) {
                 await this.setVehicleData(vehicleKey, vehicle);
             }
-            await this.setStateAsync('info.connection', true, true);
+            if (!this.stopping) {
+                await this.setStateAsync('info.connection', true, true);
+                this.log.debug(`Poll finished in ${Date.now() - pollStart} ms`);
+            }
         }
         catch (error) {
+            if (this.stopping) {
+                // Beim Beenden ist die Datenbank ggf. schon geschlossen: kein Fehler
+                return;
+            }
             this.log.error(error?.message ?? String(error));
             await this.setStateAsync('info.connection', false, true);
         }
@@ -503,13 +603,20 @@ class Evcc extends utils.Adapter {
             native: {},
         }, 'extend');
     }
-    async writeEvccState(path, name, value) {
+    /**
+     * Legt den State (einmalig) an und merkt den Wert zum gebündelten Schreiben vor.
+     *
+     * @param path State-ID
+     * @param name Feldname aus evcc
+     * @param value Wert
+     * @param writes Sammlung der zu schreibenden Werte
+     */
+    async writeEvccState(path, name, value, writes) {
         const valueType = typeof value;
         await this.ensureEvccState(path, name, valueType);
-        // @ts-ignore
-        this.setState(path, valueType === 'object' ? JSON.stringify(value) : value, true);
+        writes.push({ id: path, val: valueType === 'object' ? JSON.stringify(value) : value });
     }
-    async writeEvccNestedObject(basePath, data) {
+    async writeEvccNestedObject(basePath, data, writes) {
         for (const [entry, value] of Object.entries(data)) {
             if (value === undefined || (0, tools_1.isIgnoredEvccEntry)(entry)) {
                 continue;
@@ -519,44 +626,44 @@ class Evcc extends utils.Adapter {
             if (typeof value === 'object' && value !== null) {
                 await this.ensureEvccChannel(entryPath, formattedEntry);
                 for (const [dataPoint, keyData] of Object.entries(value)) {
-                    await this.writeEvccState(`${entryPath}.${dataPoint}`, dataPoint, keyData);
+                    await this.writeEvccState(`${entryPath}.${dataPoint}`, dataPoint, keyData, writes);
                 }
                 continue;
             }
-            await this.writeEvccState(entryPath, entry, value);
+            await this.writeEvccState(entryPath, entry, value, writes);
         }
     }
     async setStatusEvcc(daten) {
         this.currency = (0, units_1.currencySymbol)(daten.currency);
+        const writes = [];
         // Handle forecast conditionally when weatherForecast is enabled
         if (this.config.weatherForecast && daten.forecast && !(0, tools_1.isEmptyEvccValue)(daten.forecast)) {
             const forecastData = daten.forecast;
             if (typeof forecastData === 'object') {
                 const basePath = 'status.Forecast';
                 await this.ensureEvccChannel(basePath, 'Forecast');
-                await this.writeEvccNestedObject(basePath, forecastData);
+                await this.writeEvccNestedObject(basePath, forecastData, writes);
             }
             else {
-                await this.writeEvccState('status.forecast', 'forecast', forecastData);
+                await this.writeEvccState('status.forecast', 'forecast', forecastData, writes);
             }
         }
         // evcc lässt nicht gesetzte globale Limits ganz weg -> ohne das bliebe nach dem Löschen der alte Wert stehen
         if (!('batteryGridChargeLimit' in daten)) {
-            await this.setStateAsync(tools_1.EVCC_CONTROL_MAPPING.batteryGridChargeLimit, { val: 0, ack: true });
+            writes.push({ id: tools_1.EVCC_CONTROL_MAPPING.batteryGridChargeLimit, val: 0 });
         }
         // Ein globales smartCostLimit gibt es in /api/state nicht (evcc setzt es je Ladepunkt).
         // Haben alle Ladepunkte denselben Wert, wird dieser angezeigt, sonst bleibt der State unverändert.
         if (!('smartCostLimit' in daten) && Array.isArray(daten.loadpoints) && daten.loadpoints.length > 0) {
             const limits = daten.loadpoints.map(lp => lp.smartCostLimit ?? 0);
             if (limits.every(limit => limit === limits[0])) {
-                await this.setStateAsync(tools_1.EVCC_CONTROL_MAPPING.smartCostLimit, { val: limits[0], ack: true });
+                writes.push({ id: tools_1.EVCC_CONTROL_MAPPING.smartCostLimit, val: limits[0] });
             }
         }
         for (const [lpEntry, lpData] of Object.entries(daten)) {
             if (tools_1.EVCC_CONTROL_MAPPING[lpEntry]) {
                 // null = kein Limit gesetzt -> 0 (entspricht "0 = delete"), daher vor der Leer-Prüfung
-                // @ts-ignore
-                this.setState(tools_1.EVCC_CONTROL_MAPPING[lpEntry], { val: lpData ?? 0, ack: true });
+                writes.push({ id: tools_1.EVCC_CONTROL_MAPPING[lpEntry], val: (lpData ?? 0) });
                 continue;
             }
             if ((0, tools_1.isIgnoredEvccEntry)(lpEntry) || (0, tools_1.isEmptyEvccValue)(lpData)) {
@@ -567,11 +674,12 @@ class Evcc extends utils.Adapter {
                 const formattedEntry = (0, tools_1.formatEvccPathEntry)(lpEntry);
                 const basePath = `status.${formattedEntry}`;
                 await this.ensureEvccChannel(basePath, formattedEntry);
-                await this.writeEvccNestedObject(basePath, lpData);
+                await this.writeEvccNestedObject(basePath, lpData, writes);
                 continue;
             }
-            await this.writeEvccState(`status.${lpEntry}`, lpEntry, lpData);
+            await this.writeEvccState(`status.${lpEntry}`, lpEntry, lpData, writes);
         }
+        await this.flushStates(writes);
     }
     /**
      * Hole Daten von und für Vehicle
@@ -640,7 +748,7 @@ class Evcc extends utils.Adapter {
      * @param loadpoint
      * @param index
      */
-    async setLoadPointdata(loadpoint, index) {
+    async setLoadPointdata(loadpoint, index, vehicles) {
         //Ladepunkt kann es X fach geben
         index = index + 1; // +1 why Evcc starts with 1
         this.log.debug(`Ladepunkt mit index ` + `loadpoint.${index} gefunden...`);
@@ -650,55 +758,46 @@ class Evcc extends utils.Adapter {
             await this.createLoadPoint(index);
             this.maxLoadpointIndex = index;
         }
-        //Update der Werte
-        await this.setStateAsync(`loadpoint.${index}.control.maxCurrent`, {
-            val: loadpoint.maxCurrent,
-            ack: true,
-        });
-        await this.setStateAsync(`loadpoint.${index}.control.minCurrent`, {
-            val: loadpoint.minCurrent,
-            ack: true,
-        });
-        await this.setStateAsync(`loadpoint.${index}.control.disableThreshold`, {
-            val: loadpoint.disableThreshold,
-            ack: true,
-        });
-        await this.setStateAsync(`loadpoint.${index}.control.enableThreshold`, {
-            val: loadpoint.enableThreshold,
-            ack: true,
-        });
-        await this.setStateAsync(`loadpoint.${index}.control.phasesConfigured`, {
-            val: loadpoint.phasesConfigured,
-            ack: true,
-        });
-        await this.setStateAsync(`loadpoint.${index}.control.smartCostLimit`, {
-            val: loadpoint.smartCostLimit ?? 0,
-            ack: true,
-        });
-        await this.setStateAsync(`loadpoint.${index}.control.limitSoc`, {
-            val: loadpoint.limitSoc,
-            ack: true
-        });
-        await this.setStateAsync(`loadpoint.${index}.control.vehicleName`, {
-            val: loadpoint.vehicleName,
-            ack: true,
-        });
+        //Update der Werte (gesammelt, gebündelt geschrieben)
+        const control = `loadpoint.${index}.control`;
+        const writes = [
+            { id: `${control}.maxCurrent`, val: loadpoint.maxCurrent },
+            { id: `${control}.minCurrent`, val: loadpoint.minCurrent },
+            { id: `${control}.disableThreshold`, val: loadpoint.disableThreshold },
+            { id: `${control}.enableThreshold`, val: loadpoint.enableThreshold },
+            { id: `${control}.phasesConfigured`, val: loadpoint.phasesConfigured },
+            { id: `${control}.smartCostLimit`, val: loadpoint.smartCostLimit ?? 0 },
+            { id: `${control}.limitSoc`, val: loadpoint.limitSoc },
+            { id: `${control}.vehicleName`, val: loadpoint.vehicleName },
+        ];
         // Mode: evcc >= 0.316.0 reports smart + alwaysCharge, older versions pv/minpv
         this.smartModeApi = (0, mode_1.hasSmartModeApi)(loadpoint);
         const pvControl = (0, mode_1.toPvControl)(loadpoint.mode, loadpoint.alwaysCharge);
         if (pvControl !== null) {
-            await this.setStateAsync(`loadpoint.${index}.control.pvControl`, { val: pvControl, ack: true });
+            writes.push({ id: `${control}.pvControl`, val: pvControl });
         }
         if ((0, mode_1.isAlwaysChargeValue)(loadpoint.alwaysCharge)) {
-            await this.setStateAsync(`loadpoint.${index}.control.alwaysCharge`, {
-                val: loadpoint.alwaysCharge,
-                ack: true,
-            });
+            writes.push({ id: `${control}.alwaysCharge`, val: loadpoint.alwaysCharge });
+        }
+        // Ladeplan am Ladepunkt: aktiv immer, Werte nur bei gesetztem Plan (vorbereitete Werte bleiben stehen)
+        const plan = (0, plan_1.resolveLoadpointPlan)(loadpoint, vehicles);
+        writes.push({ id: `${control}.plan.active`, val: plan.active });
+        if (plan.active) {
+            if (plan.time !== undefined) {
+                writes.push({ id: `${control}.plan.time`, val: plan.time });
+            }
+            if (plan.soc !== undefined) {
+                writes.push({ id: `${control}.plan.soc`, val: plan.soc });
+            }
+            if (plan.energy !== undefined) {
+                writes.push({ id: `${control}.plan.energy`, val: plan.energy });
+            }
         }
         //Alle Werte unter Status veröffentlichen
-        await this.setStatusLoadPoint(loadpoint, index);
+        await this.setStatusLoadPoint(loadpoint, index, writes);
+        await this.flushStates(writes);
     }
-    async setStatusLoadPoint(loaddata, index) {
+    async setStatusLoadPoint(loaddata, index, writes) {
         for (const lpEntry in loaddata) {
             let lpType = typeof loaddata[lpEntry]; // get Type of Variable as String, like string/number/boolean
             let res = loaddata[lpEntry];
@@ -722,7 +821,7 @@ class Evcc extends utils.Adapter {
                 },
                 native: {},
             }, 'extend');
-            await this.setStateAsync(`loadpoint.${index}.status.${lpEntry}`, res, true);
+            writes.push({ id: `loadpoint.${index}.status.${lpEntry}`, val: res });
         }
     }
     async createLoadPoint(index) {
@@ -932,6 +1031,26 @@ class Evcc extends utils.Adapter {
             native: {},
         });
         this.subscribeStates(`loadpoint.${index}.control.vehicleName`);
+        // Ladeplan am Ladepunkt (Issue #73)
+        const planStates = [
+            { id: 'active', common: { name: 'plan set (true = create/update, false = delete)', type: 'boolean', role: 'switch' } },
+            { id: 'time', common: { name: 'plan target time', type: 'number', role: 'date' } },
+            { id: 'soc', common: { name: 'plan target soc (vehicle assigned)', type: 'number', role: 'level', unit: '%', min: 1, max: 100 } },
+            { id: 'energy', common: { name: 'plan target energy (no vehicle with soc)', type: 'number', role: 'level', unit: 'kWh', min: 0 } },
+        ];
+        await this.ensureObjectOnce(`loadpoint.${index}.control.plan`, {
+            type: 'channel',
+            common: { name: 'charging plan' },
+            native: {},
+        });
+        for (const planState of planStates) {
+            await this.setObjectNotExistsAsync(`loadpoint.${index}.control.plan.${planState.id}`, {
+                type: 'state',
+                common: { read: true, write: true, ...planState.common },
+                native: {},
+            });
+            this.subscribeStates(`loadpoint.${index}.control.plan.${planState.id}`);
+        }
     }
 }
 if (require.main !== module) {
