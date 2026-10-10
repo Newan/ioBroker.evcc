@@ -37,6 +37,11 @@ Use `loadpoint.X.status.alwaysCharge` or `loadpoint.X.control.pvControl` to dist
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (Schimi1983) fix: polls took longer than the interval with many states (e.g. weather forecast) – values are now written in batches
+* (Schimi1983) fix: no errors in the log when the adapter is stopped during a poll
+* (Schimi1983) fix unit tests: chai-as-promised is no longer loaded in test setup (not a direct dependency anymore)
+
 ### 0.3.1 (2026-10-10)
 * (arteck) Dependencies have been updated
 * (Schimi1983) fix: `enableThreshold` / `disableThreshold` could not be set

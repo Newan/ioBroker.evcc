@@ -42,6 +42,8 @@ const tools_1 = require("./lib/tools");
 const units_1 = require("./lib/units");
 const sendEvcc_1 = require("./lib/sendEvcc");
 const mode_1 = require("./lib/mode");
+/** Anzahl gleichzeitiger setState-Aufrufe beim Schreiben einer Abfrage */
+const WRITE_CONCURRENCY = 50;
 class Evcc extends utils.Adapter {
     ip = '';
     polltime = 0;
@@ -60,6 +62,8 @@ class Evcc extends utils.Adapter {
     pollRunning = false;
     /** Währungssymbol aus evcc (für Preis-Einheiten) */
     currency = '€';
+    /** true sobald der Adapter beendet wird: laufende Abfrage schreibt nichts mehr */
+    stopping = false;
     constructor(options = {}) {
         super({
             ...options,
@@ -113,12 +117,38 @@ class Evcc extends utils.Adapter {
      * @param callback
      */
     onUnload(callback) {
+        this.stopping = true;
         try {
-            clearInterval(this.adapterIntervals);
+            this.clearInterval(this.adapterIntervals);
             callback();
         }
         catch {
             callback();
+        }
+    }
+    /**
+     * Schreibt gesammelte Werte gebündelt (bis zu WRITE_CONCURRENCY gleichzeitig) mit ack = true.
+     * Einzelnes Abwarten jedes Werts machte eine Abfrage mit vielen States (z. B. Wettervorhersage)
+     * länger als das Abfrageintervall.
+     *
+     * @param writes gesammelte State-Werte
+     */
+    async flushStates(writes) {
+        // Felder, die evcc nicht liefert (undefined), nicht schreiben
+        const valid = writes.filter(w => w.val !== undefined);
+        let failed = 0;
+        for (let i = 0; i < valid.length && !this.stopping; i += WRITE_CONCURRENCY) {
+            // allSettled: ein einzelner fehlerhafter State bricht nicht die ganze Abfrage ab
+            const results = await Promise.allSettled(valid.slice(i, i + WRITE_CONCURRENCY).map(w => this.setStateAsync(w.id, { val: w.val, ack: true })));
+            results.forEach((result, j) => {
+                if (result.status === 'rejected') {
+                    failed++;
+                    this.log.debug(`setState ${valid[i + j].id} failed: ${String(result.reason)}`);
+                }
+            });
+        }
+        if (failed > 0 && !this.stopping) {
+            this.log.warn(`${failed} state(s) could not be written in this poll (details in debug log)`);
         }
     }
     /**
@@ -335,11 +365,15 @@ class Evcc extends utils.Adapter {
      * Holt /api/state von evcc und schreibt alle Werte. Läuft nie parallel zu sich selbst.
      */
     async getEvccData() {
+        if (this.stopping) {
+            return;
+        }
         if (this.pollRunning) {
             this.log.debug('Previous poll still running, skipping this interval');
             return;
         }
         this.pollRunning = true;
+        const pollStart = Date.now();
         try {
             this.log.debug(`call: http://${this.ip}/api/state`);
             const response = await (0, axios_1.default)(`http://${this.ip}/api/state`, { timeout: this.timeout });
@@ -370,9 +404,16 @@ class Evcc extends utils.Adapter {
             for (const [vehicleKey, vehicle] of Object.entries(respData.vehicles ?? {})) {
                 await this.setVehicleData(vehicleKey, vehicle);
             }
-            await this.setStateAsync('info.connection', true, true);
+            if (!this.stopping) {
+                await this.setStateAsync('info.connection', true, true);
+                this.log.debug(`Poll finished in ${Date.now() - pollStart} ms`);
+            }
         }
         catch (error) {
+            if (this.stopping) {
+                // Beim Beenden ist die Datenbank ggf. schon geschlossen: kein Fehler
+                return;
+            }
             this.log.error(error?.message ?? String(error));
             await this.setStateAsync('info.connection', false, true);
         }
@@ -503,13 +544,20 @@ class Evcc extends utils.Adapter {
             native: {},
         }, 'extend');
     }
-    async writeEvccState(path, name, value) {
+    /**
+     * Legt den State (einmalig) an und merkt den Wert zum gebündelten Schreiben vor.
+     *
+     * @param path State-ID
+     * @param name Feldname aus evcc
+     * @param value Wert
+     * @param writes Sammlung der zu schreibenden Werte
+     */
+    async writeEvccState(path, name, value, writes) {
         const valueType = typeof value;
         await this.ensureEvccState(path, name, valueType);
-        // @ts-ignore
-        this.setState(path, valueType === 'object' ? JSON.stringify(value) : value, true);
+        writes.push({ id: path, val: valueType === 'object' ? JSON.stringify(value) : value });
     }
-    async writeEvccNestedObject(basePath, data) {
+    async writeEvccNestedObject(basePath, data, writes) {
         for (const [entry, value] of Object.entries(data)) {
             if (value === undefined || (0, tools_1.isIgnoredEvccEntry)(entry)) {
                 continue;
@@ -519,44 +567,44 @@ class Evcc extends utils.Adapter {
             if (typeof value === 'object' && value !== null) {
                 await this.ensureEvccChannel(entryPath, formattedEntry);
                 for (const [dataPoint, keyData] of Object.entries(value)) {
-                    await this.writeEvccState(`${entryPath}.${dataPoint}`, dataPoint, keyData);
+                    await this.writeEvccState(`${entryPath}.${dataPoint}`, dataPoint, keyData, writes);
                 }
                 continue;
             }
-            await this.writeEvccState(entryPath, entry, value);
+            await this.writeEvccState(entryPath, entry, value, writes);
         }
     }
     async setStatusEvcc(daten) {
         this.currency = (0, units_1.currencySymbol)(daten.currency);
+        const writes = [];
         // Handle forecast conditionally when weatherForecast is enabled
         if (this.config.weatherForecast && daten.forecast && !(0, tools_1.isEmptyEvccValue)(daten.forecast)) {
             const forecastData = daten.forecast;
             if (typeof forecastData === 'object') {
                 const basePath = 'status.Forecast';
                 await this.ensureEvccChannel(basePath, 'Forecast');
-                await this.writeEvccNestedObject(basePath, forecastData);
+                await this.writeEvccNestedObject(basePath, forecastData, writes);
             }
             else {
-                await this.writeEvccState('status.forecast', 'forecast', forecastData);
+                await this.writeEvccState('status.forecast', 'forecast', forecastData, writes);
             }
         }
         // evcc lässt nicht gesetzte globale Limits ganz weg -> ohne das bliebe nach dem Löschen der alte Wert stehen
         if (!('batteryGridChargeLimit' in daten)) {
-            await this.setStateAsync(tools_1.EVCC_CONTROL_MAPPING.batteryGridChargeLimit, { val: 0, ack: true });
+            writes.push({ id: tools_1.EVCC_CONTROL_MAPPING.batteryGridChargeLimit, val: 0 });
         }
         // Ein globales smartCostLimit gibt es in /api/state nicht (evcc setzt es je Ladepunkt).
         // Haben alle Ladepunkte denselben Wert, wird dieser angezeigt, sonst bleibt der State unverändert.
         if (!('smartCostLimit' in daten) && Array.isArray(daten.loadpoints) && daten.loadpoints.length > 0) {
             const limits = daten.loadpoints.map(lp => lp.smartCostLimit ?? 0);
             if (limits.every(limit => limit === limits[0])) {
-                await this.setStateAsync(tools_1.EVCC_CONTROL_MAPPING.smartCostLimit, { val: limits[0], ack: true });
+                writes.push({ id: tools_1.EVCC_CONTROL_MAPPING.smartCostLimit, val: limits[0] });
             }
         }
         for (const [lpEntry, lpData] of Object.entries(daten)) {
             if (tools_1.EVCC_CONTROL_MAPPING[lpEntry]) {
                 // null = kein Limit gesetzt -> 0 (entspricht "0 = delete"), daher vor der Leer-Prüfung
-                // @ts-ignore
-                this.setState(tools_1.EVCC_CONTROL_MAPPING[lpEntry], { val: lpData ?? 0, ack: true });
+                writes.push({ id: tools_1.EVCC_CONTROL_MAPPING[lpEntry], val: (lpData ?? 0) });
                 continue;
             }
             if ((0, tools_1.isIgnoredEvccEntry)(lpEntry) || (0, tools_1.isEmptyEvccValue)(lpData)) {
@@ -567,11 +615,12 @@ class Evcc extends utils.Adapter {
                 const formattedEntry = (0, tools_1.formatEvccPathEntry)(lpEntry);
                 const basePath = `status.${formattedEntry}`;
                 await this.ensureEvccChannel(basePath, formattedEntry);
-                await this.writeEvccNestedObject(basePath, lpData);
+                await this.writeEvccNestedObject(basePath, lpData, writes);
                 continue;
             }
-            await this.writeEvccState(`status.${lpEntry}`, lpEntry, lpData);
+            await this.writeEvccState(`status.${lpEntry}`, lpEntry, lpData, writes);
         }
+        await this.flushStates(writes);
     }
     /**
      * Hole Daten von und für Vehicle
@@ -650,55 +699,32 @@ class Evcc extends utils.Adapter {
             await this.createLoadPoint(index);
             this.maxLoadpointIndex = index;
         }
-        //Update der Werte
-        await this.setStateAsync(`loadpoint.${index}.control.maxCurrent`, {
-            val: loadpoint.maxCurrent,
-            ack: true,
-        });
-        await this.setStateAsync(`loadpoint.${index}.control.minCurrent`, {
-            val: loadpoint.minCurrent,
-            ack: true,
-        });
-        await this.setStateAsync(`loadpoint.${index}.control.disableThreshold`, {
-            val: loadpoint.disableThreshold,
-            ack: true,
-        });
-        await this.setStateAsync(`loadpoint.${index}.control.enableThreshold`, {
-            val: loadpoint.enableThreshold,
-            ack: true,
-        });
-        await this.setStateAsync(`loadpoint.${index}.control.phasesConfigured`, {
-            val: loadpoint.phasesConfigured,
-            ack: true,
-        });
-        await this.setStateAsync(`loadpoint.${index}.control.smartCostLimit`, {
-            val: loadpoint.smartCostLimit ?? 0,
-            ack: true,
-        });
-        await this.setStateAsync(`loadpoint.${index}.control.limitSoc`, {
-            val: loadpoint.limitSoc,
-            ack: true
-        });
-        await this.setStateAsync(`loadpoint.${index}.control.vehicleName`, {
-            val: loadpoint.vehicleName,
-            ack: true,
-        });
+        //Update der Werte (gesammelt, gebündelt geschrieben)
+        const control = `loadpoint.${index}.control`;
+        const writes = [
+            { id: `${control}.maxCurrent`, val: loadpoint.maxCurrent },
+            { id: `${control}.minCurrent`, val: loadpoint.minCurrent },
+            { id: `${control}.disableThreshold`, val: loadpoint.disableThreshold },
+            { id: `${control}.enableThreshold`, val: loadpoint.enableThreshold },
+            { id: `${control}.phasesConfigured`, val: loadpoint.phasesConfigured },
+            { id: `${control}.smartCostLimit`, val: loadpoint.smartCostLimit ?? 0 },
+            { id: `${control}.limitSoc`, val: loadpoint.limitSoc },
+            { id: `${control}.vehicleName`, val: loadpoint.vehicleName },
+        ];
         // Mode: evcc >= 0.316.0 reports smart + alwaysCharge, older versions pv/minpv
         this.smartModeApi = (0, mode_1.hasSmartModeApi)(loadpoint);
         const pvControl = (0, mode_1.toPvControl)(loadpoint.mode, loadpoint.alwaysCharge);
         if (pvControl !== null) {
-            await this.setStateAsync(`loadpoint.${index}.control.pvControl`, { val: pvControl, ack: true });
+            writes.push({ id: `${control}.pvControl`, val: pvControl });
         }
         if ((0, mode_1.isAlwaysChargeValue)(loadpoint.alwaysCharge)) {
-            await this.setStateAsync(`loadpoint.${index}.control.alwaysCharge`, {
-                val: loadpoint.alwaysCharge,
-                ack: true,
-            });
+            writes.push({ id: `${control}.alwaysCharge`, val: loadpoint.alwaysCharge });
         }
         //Alle Werte unter Status veröffentlichen
-        await this.setStatusLoadPoint(loadpoint, index);
+        await this.setStatusLoadPoint(loadpoint, index, writes);
+        await this.flushStates(writes);
     }
-    async setStatusLoadPoint(loaddata, index) {
+    async setStatusLoadPoint(loaddata, index, writes) {
         for (const lpEntry in loaddata) {
             let lpType = typeof loaddata[lpEntry]; // get Type of Variable as String, like string/number/boolean
             let res = loaddata[lpEntry];
@@ -722,7 +748,7 @@ class Evcc extends utils.Adapter {
                 },
                 native: {},
             }, 'extend');
-            await this.setStateAsync(`loadpoint.${index}.status.${lpEntry}`, res, true);
+            writes.push({ id: `loadpoint.${index}.status.${lpEntry}`, val: res });
         }
     }
     async createLoadPoint(index) {
