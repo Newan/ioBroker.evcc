@@ -24,3 +24,5 @@ package-lock.json
 
 # maintenance scripts
 maintenance/**
+# old changelog
+CHANGELOG_OLD.md
