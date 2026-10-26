@@ -1,45 +1,45 @@
-import { expect } from 'chai';
+import assert from 'node:assert/strict';
 import { hasSmartModeApi, isAlwaysChargeValue, PvControl, toPvControl } from './mode';
 
 describe('mode => hasSmartModeApi', () => {
     it('detects evcc >= 0.316 by alwaysCharge', () => {
-        expect(hasSmartModeApi({ alwaysCharge: 'off' })).to.equal(true);
+        assert.strictEqual(hasSmartModeApi({ alwaysCharge: 'off' }), true);
     });
     it('returns false for older evcc versions', () => {
-        expect(hasSmartModeApi({})).to.equal(false);
-        expect(hasSmartModeApi({ alwaysCharge: null })).to.equal(false);
-        expect(hasSmartModeApi(undefined)).to.equal(false);
+        assert.strictEqual(hasSmartModeApi({}), false);
+        assert.strictEqual(hasSmartModeApi({ alwaysCharge: null }), false);
+        assert.strictEqual(hasSmartModeApi(undefined), false);
     });
 });
 
 describe('mode => isAlwaysChargeValue', () => {
     it('accepts off | on | once', () => {
         for (const v of ['off', 'on', 'once']) {
-            expect(isAlwaysChargeValue(v)).to.equal(true);
+            assert.strictEqual(isAlwaysChargeValue(v), true);
         }
     });
     it('rejects other values', () => {
         for (const v of ['ON', '', 1, true, null, undefined]) {
-            expect(isAlwaysChargeValue(v)).to.equal(false);
+            assert.strictEqual(isAlwaysChargeValue(v), false);
         }
     });
 });
 
 describe('mode => toPvControl', () => {
     it('maps legacy modes (evcc < 0.316)', () => {
-        expect(toPvControl('off')).to.equal(PvControl.Off);
-        expect(toPvControl('pv')).to.equal(PvControl.Smart);
-        expect(toPvControl('minpv')).to.equal(PvControl.SmartAlwaysCharge);
-        expect(toPvControl('now')).to.equal(PvControl.Now);
+        assert.strictEqual(toPvControl('off'), PvControl.Off);
+        assert.strictEqual(toPvControl('pv'), PvControl.Smart);
+        assert.strictEqual(toPvControl('minpv'), PvControl.SmartAlwaysCharge);
+        assert.strictEqual(toPvControl('now'), PvControl.Now);
     });
     it('maps smart + alwaysCharge (evcc >= 0.316)', () => {
-        expect(toPvControl('smart', 'off')).to.equal(PvControl.Smart);
-        expect(toPvControl('smart', 'on')).to.equal(PvControl.SmartAlwaysCharge);
-        expect(toPvControl('smart', 'once')).to.equal(PvControl.SmartAlwaysCharge);
-        expect(toPvControl('now', 'on')).to.equal(PvControl.Now);
+        assert.strictEqual(toPvControl('smart', 'off'), PvControl.Smart);
+        assert.strictEqual(toPvControl('smart', 'on'), PvControl.SmartAlwaysCharge);
+        assert.strictEqual(toPvControl('smart', 'once'), PvControl.SmartAlwaysCharge);
+        assert.strictEqual(toPvControl('now', 'on'), PvControl.Now);
     });
     it('returns null for unknown modes', () => {
-        expect(toPvControl(undefined)).to.equal(null);
-        expect(toPvControl('boost')).to.equal(null);
+        assert.strictEqual(toPvControl(undefined), null);
+        assert.strictEqual(toPvControl('boost'), null);
     });
 });
