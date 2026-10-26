@@ -134,6 +134,7 @@
       "config": "json",
       "tab": "materialize"
     },
+    "messagebox": true,
     "globalDependencies": [
       {
         "admin": ">=7.6.20"
@@ -146,10 +147,11 @@
     ]
   },
   "native": {
-    "polltime": 100,
+    "polltime": 60,
     "ip": "127.0.0.1",
-    "port": "7070",
-    "dissolveObjects": false
+    "port": 7070,
+    "dissolveObjects": false,
+    "weatherForecast": false
   },
   "objects": [],
   "instanceObjects": [

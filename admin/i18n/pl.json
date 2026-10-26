@@ -1,0 +1,17 @@
+{
+    "dissolveObjects": "Rozbijaj obiekty stanu",
+    "dissolveObjects_help": "Wyłączone: zgrupowane wartości, takie jak grid, pv lub battery, są zapisywane jako jeden tekst JSON. Włączone: są rozbijane na pojedyncze punkty danych (np. status.Grid.power) – wygodne dla VIS, wykresów i wyzwalaczy, ale tworzy więcej punktów danych.",
+    "header_connection": "Połączenie z evcc",
+    "header_data": "Punkty danych",
+    "host": "Host lub adres IP",
+    "host_error": "Wprowadź host lub adres IP bez http:// i bez ścieżki",
+    "host_help": "Adres IP lub nazwa hosta instalacji evcc, bez http://",
+    "polltime": "Interwał odpytywania",
+    "polltime_help": "Jak często odpytywany jest evcc. Krócej = bardziej aktualne wartości, ale większe obciążenie.",
+    "port": "Port",
+    "port_help": "Port interfejsu WWW evcc (domyślnie 7070)",
+    "test_connection": "Testuj połączenie",
+    "weatherForecast": "Prognozy (słońce, ceny, CO₂, temperatura)",
+    "weatherForecast_help": "Zapisuje szeregi czasowe prognoz evcc w status.Forecast. Potrzebne tylko wtedy, gdy samodzielnie analizujesz prognozy w ioBroker.",
+    "weatherForecast_warning": "Uwaga: tworzy około 1800 punktów danych, aktualizowanych przy każdym odpytaniu."
+}
