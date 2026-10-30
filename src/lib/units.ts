@@ -21,8 +21,9 @@ const energyKWh: EvccFieldMeta = { unit: 'kWh', role: 'value.energy' };
 const percent: EvccFieldMeta = { unit: '%', role: 'value' };
 const current: EvccFieldMeta = { unit: 'A', role: 'value.current' };
 const seconds: EvccFieldMeta = { unit: 's', role: 'value.interval' };
+const remaining: EvccFieldMeta = { unit: 's', role: 'value.timer' };
 const distance: EvccFieldMeta = { unit: 'km', role: 'value.distance' };
-const pricePerKWh: EvccFieldMeta = { unit: `${CURRENCY_PLACEHOLDER}/kWh`, role: 'value.price' };
+const pricePerKWh: EvccFieldMeta = { unit: `${CURRENCY_PLACEHOLDER}/kWh`, role: 'value' };
 const co2: EvccFieldMeta = { unit: 'g/kWh', role: 'value' };
 
 /** Field name (as in /api/state) -> unit/role. Used for site (status.*) and loadpoint (loadpoint.X.status.*) values. */
@@ -63,9 +64,9 @@ export const EVCC_FIELD_META: Readonly<Record<string, EvccFieldMeta>> = {
     // durations (s)
     enableDelay: seconds,
     disableDelay: seconds,
-    chargeRemainingDuration: seconds,
-    phaseRemaining: seconds,
-    pvRemaining: seconds,
+    chargeRemainingDuration: remaining,
+    phaseRemaining: remaining,
+    pvRemaining: remaining,
     // distance (km)
     vehicleRange: distance,
     vehicleOdometer: distance,
@@ -100,15 +101,31 @@ export function currencySymbol(currency: unknown): string {
  * @param field field name as in /api/state
  * @param valueType typeof the value (unit only for numbers)
  * @param currency currency symbol used for price units
- * @returns unit (optional) and role
+ * @returns unit (optional) and role (indicator for booleans, json for objects, text for strings)
  */
 export function getFieldMeta(field: string, valueType: string, currency = '€'): EvccFieldMeta {
     if (valueType === 'boolean') {
         return { role: 'indicator' };
+    }
+    if (valueType === 'object') {
+        return { role: 'json' };
+    }
+    if (valueType === 'string') {
+        return { role: 'text' };
     }
     const meta = EVCC_FIELD_META[field];
     if (!meta || valueType !== 'number') {
         return { role: 'value' };
     }
     return meta.unit ? { role: meta.role, unit: meta.unit.replace(CURRENCY_PLACEHOLDER, currency) } : { role: meta.role };
+}
+
+/**
+ * ioBroker state type for an evcc value. Objects and arrays are stored as JSON string.
+ *
+ * @param valueType typeof the value
+ * @returns common.type
+ */
+export function stateType(valueType: string): ioBroker.CommonType {
+    return valueType === 'object' ? 'string' : (valueType as ioBroker.CommonType);
 }
