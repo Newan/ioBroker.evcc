@@ -40,11 +40,21 @@ const utils = __importStar(require("@iobroker/adapter-core"));
 const axios_1 = __importDefault(require("axios"));
 const tools_1 = require("./lib/tools");
 const units_1 = require("./lib/units");
+const objects_1 = require("./lib/objects");
 const plan_1 = require("./lib/plan");
 const sendEvcc_1 = require("./lib/sendEvcc");
 const mode_1 = require("./lib/mode");
 /** Anzahl gleichzeitiger setState-Aufrufe beim Schreiben einer Abfrage */
 const WRITE_CONCURRENCY = 50;
+/** Buttons (write-only): Auslösen wird mit ack = true bestätigt */
+const BUTTON_ACTIONS = new Set(['off', 'now', 'smart', 'min', 'pv']);
+/** Beschriftung der pvControl-Werte */
+const PV_CONTROL_STATES = {
+    [mode_1.PvControl.Off]: 'off',
+    [mode_1.PvControl.Smart]: 'smart (pv)',
+    [mode_1.PvControl.SmartAlwaysCharge]: 'smart + always charge (min+pv)',
+    [mode_1.PvControl.Now]: 'now',
+};
 class Evcc extends utils.Adapter {
     ip = '';
     polltime = 0;
@@ -63,6 +73,8 @@ class Evcc extends utils.Adapter {
     pollRunning = false;
     /** Währungssymbol aus evcc (für Preis-Einheiten) */
     currency = '€';
+    /** Währung, mit der die Preis-Limits unter control angelegt wurden */
+    controlCurrency = '';
     /** true sobald der Adapter beendet wird: laufende Abfrage schreibt nichts mehr */
     stopping = false;
     constructor(options = {}) {
@@ -97,6 +109,10 @@ class Evcc extends utils.Adapter {
         }
         this.evcc = new sendEvcc_1.SendEvcc(this.ip, this.timeout, this.log);
         await this.createEvccControl();
+        // beschreibbare States: einmal per Muster statt je State abonnieren
+        this.subscribeStates('control.*');
+        this.subscribeStates('loadpoint.*.control.*');
+        this.subscribeStates('vehicle.*');
         this.adapterStart = false;
         void this.getEvccData();
         //War alles ok, dann können wir die Daten abholen
@@ -315,7 +331,12 @@ class Evcc extends utils.Adapter {
         };
         // --- Wenn direkte Aktion existiert ---
         if (index !== undefined && actionMap[action]) {
-            return actionMap[action]();
+            actionMap[action]();
+            if (BUTTON_ACTIONS.has(action)) {
+                // Buttons: Auslösen bestätigen (State-Rollen: button events are confirmed with ack = true)
+                void this.setStateAsync(id, { val: state.val, ack: true });
+            }
+            return;
         }
         // --- Fallback ---
         this.log.debug(JSON.stringify(idParts));
@@ -526,78 +547,35 @@ class Evcc extends utils.Adapter {
             this.pollRunning = false;
         }
     }
+    /**
+     * Legt die beschreibbaren Site-States unter control an bzw. gleicht Rolle/Einheit bestehender Objekte an.
+     */
     async createEvccControl() {
-        //Control Objects und Buttons:
-        await this.setObjectNotExistsAsync('control.bufferSoc', {
-            type: 'state',
-            common: {
-                name: 'bufferSoc',
-                type: 'number',
-                role: 'value',
-                read: true,
-                write: true,
-                unit: '%',
-            },
-            native: {},
-        });
-        this.subscribeStates('control.bufferSoc');
-        // extendObject: Einheit €/kWh auch bei bestehenden Installationen setzen
-        await this.extendObjectAsync('control.smartCostLimit', {
-            type: 'state',
-            common: {
-                name: 'smartCostLimit 0 = delete',
-                type: 'number',
-                role: 'value',
-                read: true,
-                write: true,
-                def: 0,
-                unit: '€/kWh',
-            },
-            native: {},
-        });
-        this.subscribeStates('control.smartCostLimit');
-        await this.extendObjectAsync(`control.batteryGridChargeLimit`, {
-            type: 'state',
-            common: {
-                name: 'batteryGridChargeLimit 0 = delete',
-                type: 'number',
-                role: 'value',
-                read: true,
-                write: true,
-                def: 0,
-                unit: '€/kWh',
-            },
-            native: {},
-        });
-        this.subscribeStates(`control.batteryGridChargeLimit`);
-        //http://192.168.178.10:7070/api/prioritysoc/50
-        await this.setObjectNotExistsAsync('control.prioritySoc', {
-            type: 'state',
-            common: {
-                name: 'prioritySoc',
-                type: 'number',
-                role: 'value',
-                read: true,
-                write: true,
-                unit: '%',
-            },
-            native: {},
-        });
-        this.subscribeStates('control.prioritySoc');
-        //bufferStartSoc
-        await this.setObjectNotExistsAsync('control.bufferStartSoc', {
-            type: 'state',
-            common: {
-                name: 'bufferStartSoc',
-                type: 'number',
-                role: 'value',
-                read: true,
-                write: true,
-                unit: '%',
-            },
-            native: {},
-        });
-        this.subscribeStates('control.bufferStartSoc');
+        await this.ensureParents([{ id: 'control', type: 'channel', name: 'Control' }]);
+        await this.ensureStates('control', (0, objects_1.siteControlStates)(this.currency));
+        this.controlCurrency = this.currency;
+    }
+    /**
+     * Legt Ordner, Geräte und Kanäle an bzw. aktualisiert deren Namen (einmal pro Laufzeit).
+     *
+     * @param parents Elternobjekte, äußerstes zuerst
+     */
+    async ensureParents(parents) {
+        for (const parent of parents) {
+            await this.ensureObjectOnce(parent.id, { type: parent.type, common: { name: parent.name }, native: {} }, 'extend');
+        }
+    }
+    /**
+     * Legt beschreibbare States an bzw. gleicht Rolle, Einheit und Grenzen bestehender Objekte an.
+     * extendObject ändert keine Werte, VIS und Skripte bleiben unberührt.
+     *
+     * @param base Elternpfad (z. B. loadpoint.1.control)
+     * @param states State-Definitionen
+     */
+    async ensureStates(base, states) {
+        for (const state of states) {
+            await this.extendObjectAsync(`${base}.${state.id}`, { type: 'state', common: state.common, native: {} });
+        }
     }
     /**
      * Legt ein Objekt nur einmal pro Laufzeit an bzw. passt es an, wenn sich der State-Typ ändert.
@@ -623,7 +601,7 @@ class Evcc extends utils.Adapter {
     async ensureEvccChannel(path, name) {
         await this.ensureObjectOnce(path, {
             type: 'channel',
-            common: { role: 'value', name },
+            common: { name },
             native: {},
         });
     }
@@ -641,7 +619,7 @@ class Evcc extends utils.Adapter {
             common: {
                 role: meta.role,
                 name,
-                type: type,
+                type: (0, units_1.stateType)(type),
                 read: true,
                 write: false,
                 ...(meta.unit ? { unit: meta.unit } : {}),
@@ -681,6 +659,13 @@ class Evcc extends utils.Adapter {
     }
     async setStatusEvcc(daten) {
         this.currency = (0, units_1.currencySymbol)(daten.currency);
+        if (this.currency !== this.controlCurrency) {
+            // control wird vor der ersten Abfrage angelegt: Einheit an die Währung aus evcc anpassen
+            for (const id of ['control.smartCostLimit', 'control.batteryGridChargeLimit']) {
+                await this.extendObjectAsync(id, { common: { unit: (0, objects_1.priceUnit)(this.currency) } });
+            }
+            this.controlCurrency = this.currency;
+        }
         const writes = [];
         // Handle forecast conditionally when weatherForecast is enabled
         if (this.config.weatherForecast && daten.forecast && !(0, tools_1.isEmptyEvccValue)(daten.forecast)) {
@@ -734,31 +719,14 @@ class Evcc extends utils.Adapter {
      * @param vehicleData
      */
     /**
-     * Legt die Objekte eines Fahrzeugs an und abonniert die beschreibbaren States (einmal pro Laufzeit).
+     * Legt die Objekte eines Fahrzeugs an (einmal pro Laufzeit).
      *
      * @param vehicleIndex Fahrzeugname in evcc (z. B. db:6)
+     * @param title Fahrzeugname für das Geräte-Objekt
      */
-    async createVehicleObjects(vehicleIndex) {
-        const base = `vehicle.${vehicleIndex}`;
-        const states = [
-            { id: 'title', common: { name: 'title', type: 'string', write: false, role: 'value' } },
-            { id: 'minSoc', common: { name: 'minSoc', type: 'number', write: true, role: 'value', unit: '%' } },
-            { id: 'limitSoc', common: { name: 'limitSoc', type: 'number', write: true, role: 'value', unit: '%' } },
-            { id: 'plan.active', common: { name: 'active', type: 'boolean', write: true, role: 'value' } },
-            { id: 'plan.planSoc', common: { name: 'planSoc', type: 'number', write: true, role: 'value', unit: '%' } },
-            { id: 'plan.time', common: { name: 'time', type: 'number', write: true, role: 'date' } },
-        ];
-        for (const state of states) {
-            // extendObject: bestehende Objekte aus älteren Versionen werden angeglichen
-            await this.extendObjectAsync(`${base}.${state.id}`, {
-                type: 'state',
-                common: { read: true, ...state.common },
-                native: {},
-            });
-            if (state.common.write) {
-                this.subscribeStates(`${base}.${state.id}`);
-            }
-        }
+    async createVehicleObjects(vehicleIndex, title) {
+        await this.ensureParents((0, objects_1.vehicleParents)(vehicleIndex, title));
+        await this.ensureStates(`vehicle.${vehicleIndex}`, objects_1.VEHICLE_STATES);
     }
     /**
      * Schreibt die Werte eines Fahrzeugs. Objekte werden nur beim ersten Aufruf angelegt.
@@ -769,7 +737,7 @@ class Evcc extends utils.Adapter {
     async setVehicleData(vehicleIndex, vehicleData) {
         this.log.debug(`Vehicle mit index ${vehicleIndex} gefunden...`);
         if (!this.knownVehicles.has(vehicleIndex)) {
-            await this.createVehicleObjects(vehicleIndex);
+            await this.createVehicleObjects(vehicleIndex, vehicleData.title ?? '');
             this.knownVehicles.add(vehicleIndex);
         }
         const base = `vehicle.${vehicleIndex}`;
@@ -801,7 +769,7 @@ class Evcc extends utils.Adapter {
         if (this.maxLoadpointIndex < index) {
             //Ladepunkt noch nicht angelegt für diesen Instanzstart
             this.log.info(`Lege neuen Ladepunkt an mit Index: ${index}`);
-            await this.createLoadPoint(index);
+            await this.createLoadPoint(index, typeof loadpoint.title === 'string' ? loadpoint.title : '');
             this.maxLoadpointIndex = index;
         }
         //Update der Werte (gesammelt, gebündelt geschrieben)
@@ -859,7 +827,7 @@ class Evcc extends utils.Adapter {
                 type: 'state',
                 common: {
                     name: lpEntry,
-                    type: lpType,
+                    type: (0, units_1.stateType)(lpType),
                     read: true,
                     write: false,
                     role: meta.role,
@@ -870,233 +838,16 @@ class Evcc extends utils.Adapter {
             writes.push({ id: `loadpoint.${index}.status.${lpEntry}`, val: res });
         }
     }
-    async createLoadPoint(index) {
-        //Control Objects und Buttons:
-        await this.setObjectNotExistsAsync(`loadpoint.${index}.control.off`, {
-            type: 'state',
-            common: {
-                name: 'Stop charging',
-                type: 'boolean',
-                role: 'button',
-                read: false,
-                write: true,
-            },
-            native: {},
-        });
-        this.subscribeStates(`loadpoint.${index}.control.off`);
-        await this.setObjectNotExistsAsync(`loadpoint.${index}.control.now`, {
-            type: 'state',
-            common: {
-                name: 'Start now charging',
-                type: 'boolean',
-                role: 'button',
-                read: false,
-                write: true,
-            },
-            native: {},
-        });
-        this.subscribeStates(`loadpoint.${index}.control.now`);
-        await this.setObjectNotExistsAsync(`loadpoint.${index}.control.smart`, {
-            type: 'state',
-            common: {
-                name: 'Start smart charging (evcc < 0.316: pv)',
-                type: 'boolean',
-                role: 'button',
-                read: false,
-                write: true,
-            },
-            native: {},
-        });
-        this.subscribeStates(`loadpoint.${index}.control.smart`);
-        await this.setObjectNotExistsAsync(`loadpoint.${index}.control.alwaysCharge`, {
-            type: 'state',
-            common: {
-                name: 'Always charge at min current (evcc >= 0.316)',
-                type: 'string',
-                role: 'level',
-                read: true,
-                write: true,
-                states: {
-                    off: 'off',
-                    on: 'on',
-                    once: 'once',
-                },
-            },
-            native: {},
-        });
-        this.subscribeStates(`loadpoint.${index}.control.alwaysCharge`);
-        // extendObject: also update name for existing installations
-        await this.extendObjectAsync(`loadpoint.${index}.control.min`, {
-            type: 'state',
-            common: {
-                name: 'Deprecated: smart + alwaysCharge on (min+pv)',
-                type: 'boolean',
-                role: 'button',
-                read: false,
-                write: true,
-            },
-            native: {},
-        });
-        this.subscribeStates(`loadpoint.${index}.control.min`);
-        await this.extendObjectAsync(`loadpoint.${index}.control.pv`, {
-            type: 'state',
-            common: {
-                name: 'Deprecated: smart + alwaysCharge off (pv)',
-                type: 'boolean',
-                role: 'button',
-                read: false,
-                write: true,
-            },
-            native: {},
-        });
-        this.subscribeStates(`loadpoint.${index}.control.pv`);
-        // extendObject: also update state labels for existing installations
-        await this.extendObjectAsync(`loadpoint.${index}.control.pvControl`, {
-            type: 'state',
-            common: {
-                name: 'control charging',
-                type: 'number',
-                role: 'level',
-                read: true,
-                write: true,
-                def: 0,
-                states: {
-                    [mode_1.PvControl.Off]: 'off',
-                    [mode_1.PvControl.Smart]: 'smart (pv)',
-                    [mode_1.PvControl.SmartAlwaysCharge]: 'smart + always charge (min+pv)',
-                    [mode_1.PvControl.Now]: 'now',
-                },
-            },
-            native: {},
-        });
-        this.subscribeStates(`loadpoint.${index}.control.pvControl`);
-        // extendObject: Einheit auch bei bestehenden Installationen ergänzen
-        await this.extendObjectAsync(`loadpoint.${index}.control.maxCurrent`, {
-            type: 'state',
-            common: {
-                name: 'maxCurrent',
-                type: 'number',
-                role: 'value.max',
-                read: true,
-                write: true,
-                unit: 'A',
-            },
-            native: {},
-        });
-        this.subscribeStates(`loadpoint.${index}.control.maxCurrent`);
-        // extendObject: Einheit auch bei bestehenden Installationen ergänzen
-        await this.extendObjectAsync(`loadpoint.${index}.control.minCurrent`, {
-            type: 'state',
-            common: {
-                name: 'minCurrent',
-                type: 'number',
-                role: 'value',
-                read: true,
-                write: true,
-                unit: 'A',
-            },
-            native: {},
-        });
-        this.subscribeStates(`loadpoint.${index}.control.minCurrent`);
-        await this.setObjectNotExistsAsync(`loadpoint.${index}.control.phasesConfigured`, {
-            type: 'state',
-            common: {
-                name: '(0=auto/1=1p/3=3p)',
-                type: 'number',
-                role: 'value',
-                read: true,
-                write: true,
-            },
-            native: {},
-        });
-        this.subscribeStates(`loadpoint.${index}.control.phasesConfigured`);
-        await this.extendObjectAsync(`loadpoint.${index}.control.smartCostLimit`, {
-            type: 'state',
-            common: {
-                name: 'smartCostLimit 0 = delete',
-                type: 'number',
-                role: 'value',
-                read: true,
-                write: true,
-                def: 0,
-                unit: '€/kWh',
-            },
-            native: {},
-        });
-        this.subscribeStates(`loadpoint.${index}.control.smartCostLimit`);
-        // extendObject: Einheit auch bei bestehenden Installationen ergänzen
-        await this.extendObjectAsync(`loadpoint.${index}.control.enableThreshold`, {
-            type: 'state',
-            common: {
-                name: 'enableThreshold',
-                type: 'number',
-                role: 'value',
-                read: true,
-                write: true,
-                unit: 'W',
-            },
-            native: {},
-        });
-        this.subscribeStates(`loadpoint.${index}.control.enableThreshold`);
-        // extendObject: Einheit auch bei bestehenden Installationen ergänzen
-        await this.extendObjectAsync(`loadpoint.${index}.control.disableThreshold`, {
-            type: 'state',
-            common: {
-                name: 'disableThreshold',
-                type: 'number',
-                role: 'value',
-                read: true,
-                write: true,
-                unit: 'W',
-            },
-            native: {},
-        });
-        this.subscribeStates(`loadpoint.${index}.control.disableThreshold`);
-        await this.setObjectNotExistsAsync(`loadpoint.${index}.control.limitSoc`, {
-            type: 'state',
-            common: {
-                name: 'limitSoc',
-                type: 'number',
-                role: 'value',
-                read: true,
-                write: true,
-                unit: '%',
-            },
-            native: {},
-        });
-        this.subscribeStates(`loadpoint.${index}.control.limitSoc`);
-        await this.setObjectNotExistsAsync(`loadpoint.${index}.control.vehicleName`, {
-            type: 'state',
-            common: {
-                name: 'vehicleName',
-                type: 'string',
-                role: 'value',
-                read: true,
-                write: true,
-            },
-            native: {},
-        });
-        this.subscribeStates(`loadpoint.${index}.control.vehicleName`);
-        // Ladeplan am Ladepunkt (Issue #73)
-        const planStates = [
-            { id: 'active', common: { name: 'plan set (true = create/update, false = delete)', type: 'boolean', role: 'switch' } },
-            { id: 'time', common: { name: 'plan target time', type: 'number', role: 'date' } },
-            { id: 'soc', common: { name: 'plan target soc (vehicle assigned)', type: 'number', role: 'level', unit: '%', min: 1, max: 100 } },
-            { id: 'energy', common: { name: 'plan target energy (no vehicle with soc)', type: 'number', role: 'level', unit: 'kWh', min: 0 } },
-        ];
-        await this.ensureObjectOnce(`loadpoint.${index}.control.plan`, {
-            type: 'channel',
-            common: { name: 'charging plan' },
-            native: {},
-        });
-        for (const planState of planStates) {
-            await this.setObjectNotExistsAsync(`loadpoint.${index}.control.plan.${planState.id}`, {
-                type: 'state',
-                common: { read: true, write: true, ...planState.common },
-                native: {},
-            });
-            this.subscribeStates(`loadpoint.${index}.control.plan.${planState.id}`);
-        }
+    /**
+     * Legt Gerät, Kanäle und beschreibbare States eines Ladepunkts an bzw. gleicht bestehende Objekte an.
+     *
+     * @param index Ladepunkt-Index (ab 1)
+     * @param title Name des Ladepunkts in evcc
+     */
+    async createLoadPoint(index, title) {
+        await this.ensureParents((0, objects_1.loadpointParents)(index, title));
+        await this.ensureStates(`loadpoint.${index}.control`, (0, objects_1.loadpointControlStates)(this.currency, PV_CONTROL_STATES));
+        await this.ensureStates(`loadpoint.${index}.control.plan`, objects_1.LOADPOINT_PLAN_STATES);
     }
 }
 if (require.main !== module) {
