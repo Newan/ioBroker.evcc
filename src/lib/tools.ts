@@ -47,6 +47,22 @@ export function normalizeHost(raw: unknown): string {
         .trim();
 }
 
+/**
+ * Short, readable reason for a failed request to evcc (network error code or HTTP status).
+ *
+ * @param error error thrown by axios
+ * @returns reason like ECONNREFUSED or HTTP 404, or null if it is not a request error
+ */
+export function describeRequestError(error: unknown): string | null {
+    if (!axios.isAxiosError(error)) {
+        return null;
+    }
+    if (error.response) {
+        return `HTTP ${error.response.status}`;
+    }
+    return error.code ?? error.message;
+}
+
 export function isIgnoredEvccEntry(entry: string): boolean {
     return ['result', 'vehicles', 'loadpoints', 'feedin', 'planer', 'planner', 'forecast'].includes(entry);
 }
