@@ -1,4 +1,7 @@
 # Older changes
+## 0.2.8 (2026-03-09)
+* (arteck) reduce read request, static dp read only once
+
 ## 0.2.7 (2026-03-09)
 * (arteck) delete big arrays feedin, grid, planner
 * (arteck) refactor tests

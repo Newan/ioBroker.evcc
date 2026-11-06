@@ -62,7 +62,7 @@ Note: evcc's own `status.planActive` means "currently charging according to plan
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.3.2 (2026-11-06)
 * (Schimi1983) state roles according to the ioBroker state roles: writable states use `level.*` / `switch` / `button.*` / `text` instead of `value`, min/max for percent values, JSON values use role `json` (type string), strings `text`, remaining durations `value.timer`; ids and values are unchanged
 * (Schimi1983) complete object tree: folders `loadpoint` / `vehicle`, a device per loadpoint and vehicle (named by its evcc title), channels `control` / `status`
 * (Schimi1983) price limits under `control` use the currency configured in evcc, buttons are confirmed with ack = true
@@ -99,9 +99,6 @@ Note: evcc's own `status.planActive` means "currently charging according to plan
 
 ### 0.2.9 (2026-07-15)
 * (arteck) add grid request
-
-### 0.2.8 (2026-03-09)
-* (arteck) reduce read request, static dp read only once
 
 [Older changelogs can be found there](CHANGELOG_OLD.md)
 
