@@ -1,73 +1,122 @@
 {
   "i18n": true,
-  "type": "tabs",
+  "type": "panel",
   "items": {
-    "general": {
-      "type": "panel",
-      "label": "general",
-      "items": {
-        "polltime": {
-          "newLine": true,
-          "type": "number",
-          "label": "polltime",
-          "help": "polltime_help",
-          "min": 1,
-          "xs": 12,
-          "sm": 12,
-          "md": 6,
-          "lg": 4,
-          "xl": 4
-        },
-        "dissolveObjects": {
-          "newLine": true,
-          "type": "checkbox",
-          "label": "dissolveObjects",
-          "default": false,
-          "xs": 12,
-          "sm": 12,
-          "md": 6,
-          "lg": 4,
-          "xl": 4
-        },
-        "ip": {
-          "newLine": true,
-          "type": "text",
-          "label": "ip",
-          "help": "ip_help",
-          "xs": 12,
-          "sm": 12,
-          "md": 6,
-          "lg": 4,
-          "xl": 4
-        },
-        "port": {
-          "newLine": false,
-          "type": "number",
-          "label": "port",
-          "help": "port_help",
-          "min": 1,
-          "xs": 12,
-          "sm": 12,
-          "md": 6,
-          "lg": 4,
-          "xl": 4
-        },
-        "_spacer": {
-          "type": "divider",
-          "color": "secondary"
-        },
-        "weatherForecast": {
-          "newLine": true,
-          "type": "checkbox",
-          "label": "Weather Forecast",
-          "default": false,
-          "xs": 12,
-          "sm": 12,
-          "md": 6,
-          "lg": 4,
-          "xl": 4
-        }
-      }
+    "_headerConnection": {
+      "type": "header",
+      "text": "header_connection",
+      "size": 3,
+      "newLine": true,
+      "xs": 12,
+      "sm": 12,
+      "md": 12,
+      "lg": 12,
+      "xl": 12
+    },
+    "ip": {
+      "type": "text",
+      "label": "host",
+      "help": "host_help",
+      "placeholder": "192.168.1.10",
+      "trim": true,
+      "validator": "!!data.ip && !!data.ip.trim() && !/^\\s*https?:/i.test(data.ip) && !/[\\s/]/.test(data.ip.trim())",
+      "validatorErrorText": "host_error",
+      "validatorNoSaveOnError": true,
+      "newLine": true,
+      "xs": 12,
+      "sm": 12,
+      "md": 6,
+      "lg": 4,
+      "xl": 4
+    },
+    "port": {
+      "type": "number",
+      "label": "port",
+      "help": "port_help",
+      "min": 1,
+      "max": 65535,
+      "xs": 12,
+      "sm": 6,
+      "md": 3,
+      "lg": 2,
+      "xl": 2
+    },
+    "polltime": {
+      "type": "number",
+      "label": "polltime",
+      "help": "polltime_help",
+      "min": 5,
+      "max": 3600,
+      "unit": "s",
+      "xs": 12,
+      "sm": 6,
+      "md": 3,
+      "lg": 2,
+      "xl": 2
+    },
+    "_testConnection": {
+      "type": "sendTo",
+      "label": "test_connection",
+      "command": "testConnection",
+      "jsonData": "{\"ip\": \"${data.ip}\", \"port\": \"${data.port}\"}",
+      "showProcess": true,
+      "variant": "outlined",
+      "disabled": "!data.ip || !data.port",
+      "newLine": true,
+      "xs": 12,
+      "sm": 6,
+      "md": 4,
+      "lg": 3,
+      "xl": 3
+    },
+    "_headerData": {
+      "type": "header",
+      "text": "header_data",
+      "size": 3,
+      "newLine": true,
+      "xs": 12,
+      "sm": 12,
+      "md": 12,
+      "lg": 12,
+      "xl": 12
+    },
+    "dissolveObjects": {
+      "type": "checkbox",
+      "label": "dissolveObjects",
+      "help": "dissolveObjects_help",
+      "default": false,
+      "newLine": true,
+      "xs": 12,
+      "sm": 12,
+      "md": 6,
+      "lg": 6,
+      "xl": 6
+    },
+    "weatherForecast": {
+      "type": "checkbox",
+      "label": "weatherForecast",
+      "help": "weatherForecast_help",
+      "default": false,
+      "newLine": true,
+      "xs": 12,
+      "sm": 12,
+      "md": 6,
+      "lg": 6,
+      "xl": 6
+    },
+    "_weatherForecastWarning": {
+      "type": "staticText",
+      "text": "weatherForecast_warning",
+      "hidden": "!data.weatherForecast",
+      "style": {
+        "color": "#ed6c02"
+      },
+      "newLine": true,
+      "xs": 12,
+      "sm": 12,
+      "md": 6,
+      "lg": 6,
+      "xl": 6
     }
   }
 }

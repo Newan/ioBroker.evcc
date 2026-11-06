@@ -73,28 +73,20 @@ class Evcc extends utils.Adapter {
         this.on('ready', this.onReady.bind(this));
         this.on('stateChange', this.onStateChange.bind(this));
         this.on('unload', this.onUnload.bind(this));
+        this.on('message', this.onMessage.bind(this));
     }
     /**
      * Is called when databases are connected and adapter received configuration.
      */
     async onReady() {
-        if (this.config.ip) {
-            if (this.config.ip !== '0.0.0.0' && this.config.ip !== '') {
-                this.config.ip = this.config.ip.replace('http', '');
-                this.config.ip = this.config.ip.replace('://', '');
-                // add port to ip
-                this.ip = `${this.config.ip}:${this.config.port}`;
-                this.log.debug(`Final Ip:${this.ip}`);
-            }
-            else {
-                this.log.error('No ip is set, adapter stop');
-                return;
-            }
-        }
-        else {
-            this.log.error('No ip is set, adapter stop');
+        const host = (0, tools_1.normalizeHost)(this.config.ip);
+        if (host === '' || host === '0.0.0.0') {
+            this.log.error('No evcc host / IP is set, adapter stop');
             return;
         }
+        // add port to host
+        this.ip = `${host}:${this.config.port}`;
+        this.log.debug(`Final Ip:${this.ip}`);
         if (this.config.polltime > 0) {
             this.polltime = this.config.polltime;
             this.timeout = this.polltime * 1000 - 500; //'500ms unter interval'
@@ -125,6 +117,60 @@ class Evcc extends utils.Adapter {
         }
         catch {
             callback();
+        }
+    }
+    /**
+     * Handles messages from the admin config page (sendTo button "Test connection").
+     *
+     * @param obj message from admin
+     */
+    async onMessage(obj) {
+        if (!obj || typeof obj !== 'object' || obj.command !== 'testConnection' || !obj.callback) {
+            return;
+        }
+        const reply = (response) => {
+            this.sendTo(obj.from, obj.command, response, obj.callback);
+        };
+        let message = {};
+        try {
+            message = (typeof obj.message === 'string' ? JSON.parse(obj.message) : obj.message) ?? {};
+        }
+        catch {
+            message = {};
+        }
+        // Antworttexte in Systemsprache (de/en), andere Sprachen erhalten Englisch
+        const systemConfig = await this.getForeignObjectAsync('system.config');
+        const de = systemConfig?.common?.language === 'de';
+        const host = (0, tools_1.normalizeHost)(message.ip);
+        const port = Number(message.port);
+        if (host === '' || !Number.isInteger(port) || port < 1 || port > 65535) {
+            reply({ error: de ? 'Bitte gültigen Host / IP und Port eingeben.' : 'Please enter a valid host / IP and port.' });
+            return;
+        }
+        const url = `http://${host}:${port}`;
+        try {
+            const response = await axios_1.default.get(`${url}/api/state`, { timeout: 5000 });
+            const data = response.data?.result ?? response.data;
+            if (!data || typeof data !== 'object' || !Array.isArray(data.loadpoints)) {
+                reply({
+                    error: de
+                        ? `${url} antwortet, aber das ist offenbar kein evcc.`
+                        : `${url} answered, but this does not look like evcc.`,
+                });
+                return;
+            }
+            const loadpoints = data.loadpoints.length;
+            const vehicles = data.vehicles && typeof data.vehicles === 'object' ? Object.keys(data.vehicles).length : 0;
+            const version = data.version ?? '?';
+            reply({
+                result: de
+                    ? `Verbunden mit evcc ${version} (${host}:${port}): ${loadpoints} Ladepunkt(e), ${vehicles} Fahrzeug(e).`
+                    : `Connected to evcc ${version} (${host}:${port}): ${loadpoints} loadpoint(s), ${vehicles} vehicle(s).`,
+            });
+        }
+        catch (error) {
+            const reason = error?.message ?? String(error);
+            reply({ error: de ? `Keine Verbindung zu ${url}: ${reason}` : `No connection to ${url}: ${reason}` });
         }
     }
     /**

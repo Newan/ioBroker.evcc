@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EVCC_CONTROL_MAPPING = void 0;
 exports.formatDuration = formatDuration;
+exports.normalizeHost = normalizeHost;
 exports.isIgnoredEvccEntry = isIgnoredEvccEntry;
 exports.isEmptyEvccValue = isEmptyEvccValue;
 exports.capitalizeFirst = capitalizeFirst;
@@ -38,6 +39,23 @@ function formatDuration(seconds) {
     const pad = (n) => String(n).padStart(2, '0');
     const hms = `${pad(Math.floor((s % 86400) / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
     return days > 0 ? `${pad(days)}:${hms}` : hms;
+}
+/**
+ * Normalizes the configured evcc host: removes a leading http:// or https://, a path and surrounding spaces.
+ * The old implementation removed the first "http" anywhere in the string, which broke host names containing "http".
+ *
+ * @param raw host or IP from the adapter config (may include a protocol)
+ * @returns host without protocol, or empty string if nothing usable is left
+ */
+function normalizeHost(raw) {
+    if (typeof raw !== 'string') {
+        return '';
+    }
+    return raw
+        .trim()
+        .replace(/^https?:\/\//i, '')
+        .replace(/\/.*$/, '')
+        .trim();
 }
 function isIgnoredEvccEntry(entry) {
     return ['result', 'vehicles', 'loadpoints', 'feedin', 'planer', 'planner', 'forecast'].includes(entry);

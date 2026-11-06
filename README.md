@@ -16,6 +16,17 @@ Controll evcc over rest api
 
 Forum: https://forum.iobroker.net/topic/49165/neuer-adapter-iobroker-evcc
 
+## Configuration
+
+| Setting | Meaning |
+|---|---|
+| Host or IP address | IP or host name of evcc, without `http://` (e.g. `192.168.1.10` or `evcc.local`) |
+| Port | port of the evcc web interface, default `7070` |
+| Poll interval | how often evcc is read (5–3600 s, default 60 s) |
+| Test connection | checks the entered host/port without saving and shows the evcc version and number of loadpoints/vehicles |
+| Dissolve status objects | off: grouped values such as `grid`, `pv` or `battery` are stored as one JSON text in `status.*`. On: they are split into single states (e.g. `status.Grid.power`). Only the first level is split. |
+| Forecasts | writes the forecast time series of evcc (solar, prices, CO₂, temperature) to `status.Forecast` – about 1,800 states, only needed if you evaluate them yourself |
+
 ## Charge mode (evcc >= 0.316.0)
 
 evcc 0.316.0 renamed the mode `pv` to `smart` and replaced `minpv` with the separate setting `alwaysCharge`
@@ -52,6 +63,11 @@ Note: evcc's own `status.planActive` means "currently charging according to plan
     ### **WORK IN PROGRESS**
 -->
 ### **WORK IN PROGRESS**
+* (Schimi1983) admin: reworked config page (connection / data points sections, help texts, validation, units), new "Test connection" button
+* (Schimi1983) fix: host was cut when it contained "http" anywhere (e.g. a host name), now only a leading http:// / https:// and a path are removed
+* (Schimi1983) defaults for new instances: poll interval 60 s, port as number
+* (Schimi1983) repository checker (#141): unit tests use node:assert instead of chai (W0063), package.json "files" instead of .npmignore (W9503), i18n short format (S5601)
+* (Schimi1983) remove unused workflow file dependabot-automerge.yml.OLD (pull_request_target, #139)
 * (Schimi1983) fix: polls took longer than the interval with many states (e.g. weather forecast) – values are now written in batches
 * (Schimi1983) fix: no errors in the log when the adapter is stopped during a poll
 * (Schimi1983) fix unit tests: chai-as-promised is no longer loaded in test setup (not a direct dependency anymore)

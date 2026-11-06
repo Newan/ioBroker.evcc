@@ -1,0 +1,17 @@
+{
+    "dissolveObjects": "拆分状态对象",
+    "dissolveObjects_help": "关闭：grid、pv 或 battery 等组合值保存为一个 JSON 文本。开启：拆分为单独的数据点（例如 status.Grid.power），便于 VIS、图表和触发器使用，但会产生更多数据点。",
+    "header_connection": "连接到 evcc",
+    "header_data": "数据点",
+    "host": "主机或 IP 地址",
+    "host_error": "请输入不带 http:// 和路径的主机或 IP 地址",
+    "host_help": "evcc 安装的 IP 地址或主机名，不带 http://",
+    "polltime": "轮询间隔",
+    "polltime_help": "读取 evcc 的频率。越短数值越新，但负载越高。",
+    "port": "端口",
+    "port_help": "evcc 网页界面的端口（默认 7070）",
+    "test_connection": "测试连接",
+    "weatherForecast": "预测（太阳能、电价、CO₂、温度）",
+    "weatherForecast_help": "将 evcc 的预测时间序列写入 status.Forecast。仅当您在 ioBroker 中自行分析预测时才需要。",
+    "weatherForecast_warning": "注意：会创建约 1,800 个数据点，每次轮询都会更新。"
+}

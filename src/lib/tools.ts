@@ -29,6 +29,24 @@ export function formatDuration(seconds: unknown): string {
     return days > 0 ? `${pad(days)}:${hms}` : hms;
 }
 
+/**
+ * Normalizes the configured evcc host: removes a leading http:// or https://, a path and surrounding spaces.
+ * The old implementation removed the first "http" anywhere in the string, which broke host names containing "http".
+ *
+ * @param raw host or IP from the adapter config (may include a protocol)
+ * @returns host without protocol, or empty string if nothing usable is left
+ */
+export function normalizeHost(raw: unknown): string {
+    if (typeof raw !== 'string') {
+        return '';
+    }
+    return raw
+        .trim()
+        .replace(/^https?:\/\//i, '')
+        .replace(/\/.*$/, '')
+        .trim();
+}
+
 export function isIgnoredEvccEntry(entry: string): boolean {
     return ['result', 'vehicles', 'loadpoints', 'feedin', 'planer', 'planner', 'forecast'].includes(entry);
 }

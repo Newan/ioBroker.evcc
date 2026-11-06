@@ -12,13 +12,5 @@ process.on('unhandledRejection', (e) => {
     throw e;
 });
 
-// enable the should interface of chai
-// mocha, sinon and sinon-chai are provided by @iobroker/testing (repochecker W0063) and are not loaded here;
-// chai is a direct devDependency because @iobroker/testing installs it only nested.
-const { should } = require('chai');
-
-exports.mochaHooks = {
-    beforeAll() {
-        should();
-    },
-};
+// Unit tests use node:assert, so no assertion library (chai, sinon-chai, ...) is loaded here.
+// mocha is provided by @iobroker/testing (repochecker W0063).

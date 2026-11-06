@@ -1,0 +1,17 @@
+{
+    "dissolveObjects": "Dissolve status objects",
+    "dissolveObjects_help": "Off: grouped values such as grid, pv or battery are stored as one JSON text. On: they are split into single data points (e.g. status.Grid.power) – handy for VIS, charts and triggers, but creates more data points.",
+    "header_connection": "Connection to evcc",
+    "header_data": "Data points",
+    "host": "Host or IP address",
+    "host_error": "Please enter a host or IP address without http:// and without a path",
+    "host_help": "IP address or host name of your evcc installation, without http://",
+    "polltime": "Poll interval",
+    "polltime_help": "How often evcc is read. Shorter = more up to date values, but more load.",
+    "port": "Port",
+    "port_help": "Port of the evcc web interface (default 7070)",
+    "test_connection": "Test connection",
+    "weatherForecast": "Forecasts (solar, prices, CO₂, temperature)",
+    "weatherForecast_help": "Writes the forecast time series of evcc to status.Forecast. Only needed if you evaluate the forecasts yourself in ioBroker.",
+    "weatherForecast_warning": "Note: creates about 1,800 data points that are updated on every poll."
+}

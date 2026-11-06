@@ -1,0 +1,17 @@
+{
+    "dissolveObjects": "Statusobjecten opsplitsen",
+    "dissolveObjects_help": "Uit: gegroepeerde waarden zoals grid, pv of battery worden als één JSON-tekst opgeslagen. Aan: ze worden opgesplitst in afzonderlijke datapunten (bijv. status.Grid.power) – handig voor VIS, grafieken en triggers, maar levert meer datapunten op.",
+    "header_connection": "Verbinding met evcc",
+    "header_data": "Datapunten",
+    "host": "Host of IP-adres",
+    "host_error": "Voer een host of IP-adres in zonder http:// en zonder pad",
+    "host_help": "IP-adres of hostnaam van je evcc-installatie, zonder http://",
+    "polltime": "Pollinterval",
+    "polltime_help": "Hoe vaak evcc wordt uitgelezen. Korter = actuelere waarden, maar meer belasting.",
+    "port": "Poort",
+    "port_help": "Poort van de evcc-webinterface (standaard 7070)",
+    "test_connection": "Verbinding testen",
+    "weatherForecast": "Prognoses (zon, prijzen, CO₂, temperatuur)",
+    "weatherForecast_help": "Schrijft de prognosetijdreeksen van evcc naar status.Forecast. Alleen nodig als je de prognoses zelf in ioBroker verwerkt.",
+    "weatherForecast_warning": "Let op: maakt ongeveer 1.800 datapunten aan die bij elke poll worden bijgewerkt."
+}
