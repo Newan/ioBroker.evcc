@@ -63,6 +63,9 @@ Note: evcc's own `status.planActive` means "currently charging according to plan
     ### **WORK IN PROGRESS**
 -->
 ### **WORK IN PROGRESS**
+* (Schimi1983) state roles according to the ioBroker state roles: writable states use `level.*` / `switch` / `button.*` / `text` instead of `value`, min/max for percent values, JSON values use role `json` (type string), strings `text`, remaining durations `value.timer`; ids and values are unchanged
+* (Schimi1983) complete object tree: folders `loadpoint` / `vehicle`, a device per loadpoint and vehicle (named by its evcc title), channels `control` / `status`
+* (Schimi1983) price limits under `control` use the currency configured in evcc, buttons are confirmed with ack = true
 * (Schimi1983) admin: reworked config page (connection / data points sections, help texts, validation, units), new "Test connection" button
 * (Schimi1983) fix: host was cut when it contained "http" anywhere (e.g. a host name), now only a leading http:// / https:// and a path are removed
 * (Schimi1983) defaults for new instances: poll interval 60 s, port as number
