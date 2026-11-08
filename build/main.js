@@ -40,6 +40,7 @@ const utils = __importStar(require("@iobroker/adapter-core"));
 const axios_1 = __importDefault(require("axios"));
 const tools_1 = require("./lib/tools");
 const units_1 = require("./lib/units");
+const stale_1 = require("./lib/stale");
 const objects_1 = require("./lib/objects");
 const plan_1 = require("./lib/plan");
 const sendEvcc_1 = require("./lib/sendEvcc");
@@ -75,6 +76,12 @@ class Evcc extends utils.Adapter {
     currency = '€';
     /** Währung, mit der die Preis-Limits unter control angelegt wurden */
     controlCurrency = '';
+    /** Verbindungszustand zu evcc (undefined = noch keine Abfrage), für einmalige Log-Meldungen */
+    evccReachable = undefined;
+    /** bekannte Status-States (status.*, loadpoint.X.status.*), relativ zur Instanz */
+    statusIds = new Set();
+    /** Status-States, die evcc nicht mehr liefert und die schon auf null gesetzt wurden */
+    clearedIds = new Set();
     /** true sobald der Adapter beendet wird: laufende Abfrage schreibt nichts mehr */
     stopping = false;
     constructor(options = {}) {
@@ -109,6 +116,7 @@ class Evcc extends utils.Adapter {
         }
         this.evcc = new sendEvcc_1.SendEvcc(this.ip, this.timeout, this.log);
         await this.createEvccControl();
+        await this.alignStatusObjects();
         // beschreibbare States: einmal per Muster statt je State abonnieren
         this.subscribeStates('control.*');
         this.subscribeStates('loadpoint.*.control.*');
@@ -531,7 +539,11 @@ class Evcc extends utils.Adapter {
                 await this.setVehicleData(vehicleKey, vehicle);
             }
             if (!this.stopping) {
-                await this.setStateAsync('info.connection', true, true);
+                if (this.evccReachable === false) {
+                    this.log.info(`Connection to evcc at http://${this.ip} restored`);
+                }
+                this.evccReachable = true;
+                await this.setStateChangedAsync('info.connection', true, true);
                 this.log.debug(`Poll finished in ${Date.now() - pollStart} ms`);
             }
         }
@@ -540,11 +552,74 @@ class Evcc extends utils.Adapter {
                 // Beim Beenden ist die Datenbank ggf. schon geschlossen: kein Fehler
                 return;
             }
-            this.log.error(error?.message ?? String(error));
-            await this.setStateAsync('info.connection', false, true);
+            const reason = (0, tools_1.describeRequestError)(error);
+            if (reason === null) {
+                // kein Verbindungsproblem, sondern ein Fehler beim Verarbeiten der Daten
+                this.log.error(error?.message ?? String(error));
+            }
+            else if (this.evccReachable !== false) {
+                // evcc nicht erreichbar (z. B. Neustart/Update): einmal warnen, info.connection zeigt den Zustand
+                this.log.warn(`evcc at http://${this.ip} not reachable (${reason}), retrying every ${this.polltime} s`);
+            }
+            else {
+                this.log.debug(`evcc still not reachable (${reason})`);
+            }
+            if (reason !== null) {
+                this.evccReachable = false;
+            }
+            await this.setStateChangedAsync('info.connection', false, true);
         }
         finally {
             this.pollRunning = false;
+        }
+    }
+    /**
+     * Gleicht beim Start alle vorhandenen Status-Objekte an die aktuellen Rollen/Typen an und merkt sie sich.
+     * Felder, die evcc gerade nicht liefert, würden sonst erst angepasst, wenn evcc sie wieder sendet.
+     */
+    async alignStatusObjects() {
+        const objects = await this.getAdapterObjectsAsync();
+        for (const [fullId, obj] of Object.entries(objects)) {
+            const id = fullId.slice(this.namespace.length + 1);
+            if (!(0, stale_1.statusKeyOf)(id)) {
+                continue;
+            }
+            if (obj.type === 'channel' && obj.common.role !== undefined) {
+                // Kanäle haben keine State-Rolle (ältere Versionen setzten role: value)
+                const { role: _role, ...common } = obj.common;
+                await this.setObjectAsync(id, { type: 'channel', common, native: obj.native ?? {} });
+                continue;
+            }
+            if (obj.type !== 'state') {
+                continue;
+            }
+            this.statusIds.add(id);
+            const common = obj.common;
+            const expected = (0, units_1.statusCommon)(id.split('.').pop() ?? '', common.type ?? 'mixed', this.currency);
+            if (common.role !== expected.role || common.type !== expected.type) {
+                await this.extendObjectAsync(id, { common: { role: expected.role, type: expected.type } });
+            }
+        }
+    }
+    /**
+     * Setzt Status-States, die evcc nicht mehr liefert, einmalig auf null (z. B. fatal, Restladezeit nach dem Laden).
+     *
+     * @param scope status oder loadpoint.X.status
+     * @param presentKeys Felder der aktuellen evcc-Antwort
+     * @param writes Sammlung der zu schreibenden Werte
+     */
+    clearMissing(scope, presentKeys, writes) {
+        const missing = new Set((0, stale_1.findMissing)(this.statusIds, scope, presentKeys));
+        for (const id of missing) {
+            if (!this.clearedIds.has(id)) {
+                writes.push({ id, val: null });
+                this.clearedIds.add(id);
+            }
+        }
+        for (const id of this.clearedIds) {
+            if ((0, stale_1.statusKeyOf)(id)?.scope === scope && !missing.has(id)) {
+                this.clearedIds.delete(id);
+            }
         }
     }
     /**
@@ -613,19 +688,12 @@ class Evcc extends utils.Adapter {
      * @param type typeof des Werts
      */
     async ensureEvccState(path, name, type) {
-        const meta = (0, units_1.getFieldMeta)(name, type, this.currency);
         await this.ensureObjectOnce(path, {
             type: 'state',
-            common: {
-                role: meta.role,
-                name,
-                type: (0, units_1.stateType)(type),
-                read: true,
-                write: false,
-                ...(meta.unit ? { unit: meta.unit } : {}),
-            },
+            common: { name, read: true, write: false, ...(0, units_1.statusCommon)(name, type, this.currency) },
             native: {},
         }, 'extend');
+        this.statusIds.add(path);
     }
     /**
      * Legt den State (einmalig) an und merkt den Wert zum gebündelten Schreiben vor.
@@ -710,6 +778,7 @@ class Evcc extends utils.Adapter {
             }
             await this.writeEvccState(`status.${lpEntry}`, lpEntry, lpData, writes);
         }
+        this.clearMissing('status', Object.keys(daten), writes);
         await this.flushStates(writes);
     }
     /**
@@ -809,6 +878,7 @@ class Evcc extends utils.Adapter {
         }
         //Alle Werte unter Status veröffentlichen
         await this.setStatusLoadPoint(loadpoint, index, writes);
+        this.clearMissing(`loadpoint.${index}.status`, Object.keys(loadpoint), writes);
         await this.flushStates(writes);
     }
     async setStatusLoadPoint(loaddata, index, writes) {
@@ -822,19 +892,13 @@ class Evcc extends utils.Adapter {
                 res = (0, tools_1.formatDuration)(res);
                 lpType = 'string';
             }
-            const meta = (0, units_1.getFieldMeta)(lpEntry, lpType, this.currency);
-            await this.ensureObjectOnce(`loadpoint.${index}.status.${lpEntry}`, {
+            const id = `loadpoint.${index}.status.${lpEntry}`;
+            await this.ensureObjectOnce(id, {
                 type: 'state',
-                common: {
-                    name: lpEntry,
-                    type: (0, units_1.stateType)(lpType),
-                    read: true,
-                    write: false,
-                    role: meta.role,
-                    ...(meta.unit ? { unit: meta.unit } : {}),
-                },
+                common: { name: lpEntry, read: true, write: false, ...(0, units_1.statusCommon)(lpEntry, lpType, this.currency) },
                 native: {},
             }, 'extend');
+            this.statusIds.add(id);
             writes.push({ id: `loadpoint.${index}.status.${lpEntry}`, val: res });
         }
     }
