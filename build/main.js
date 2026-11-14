@@ -41,6 +41,8 @@ const axios_1 = __importDefault(require("axios"));
 const tools_1 = require("./lib/tools");
 const units_1 = require("./lib/units");
 const stale_1 = require("./lib/stale");
+const structure_1 = require("./lib/structure");
+const batteryMode_1 = require("./lib/batteryMode");
 const objects_1 = require("./lib/objects");
 const plan_1 = require("./lib/plan");
 const sendEvcc_1 = require("./lib/sendEvcc");
@@ -82,6 +84,12 @@ class Evcc extends utils.Adapter {
     statusIds = new Set();
     /** Status-States, die evcc nicht mehr liefert und die schon auf null gesetzt wurden */
     clearedIds = new Set();
+    /** Name (evcc-Titel) je angelegtem Ladepunkt / Fahrzeug, um Umbenennungen in evcc zu übernehmen */
+    parentTitles = new Map();
+    /** true bis der Objektbaum nach dem Start bzw. nach einem evcc-Neustart mit evcc abgeglichen wurde */
+    structureSyncPending = true;
+    /** Externer Hausakku-Modus, den der Adapter wiederholt an evcc sendet (evcc setzt ihn nach 60 s zurück) */
+    batteryModeTimer = undefined;
     /** true sobald der Adapter beendet wird: laufende Abfrage schreibt nichts mehr */
     stopping = false;
     constructor(options = {}) {
@@ -121,6 +129,7 @@ class Evcc extends utils.Adapter {
         this.subscribeStates('control.*');
         this.subscribeStates('loadpoint.*.control.*');
         this.subscribeStates('vehicle.*');
+        await this.resumeBatteryMode();
         this.adapterStart = false;
         void this.getEvccData();
         //War alles ok, dann können wir die Daten abholen
@@ -137,6 +146,7 @@ class Evcc extends utils.Adapter {
         this.stopping = true;
         try {
             this.clearInterval(this.adapterIntervals);
+            this.clearInterval(this.batteryModeTimer);
             callback();
         }
         catch {
@@ -303,6 +313,7 @@ class Evcc extends utils.Adapter {
                 bufferStartSoc: () => this.evcc.setEvccBufferStartSoc(Number(val)),
                 prioritySoc: () => this.evcc.setEvccPrioritySoc(Number(val)),
                 smartCostLimit: () => void this.evcc.setEvccsmartCostLimit(Number(val)),
+                batteryMode: () => void this.setBatteryMode(val),
                 batteryGridChargeLimit: () => void this.evcc.setEvccBatteryGridChargeLimit(Number(val)),
             };
             if (evccRootMap[action]) {
@@ -335,6 +346,10 @@ class Evcc extends utils.Adapter {
             enableThreshold: () => doAction('Set enable threshold', this.evcc.setEvccEnableThreshold, index, val),
             limitSoc: () => doAction('Set limitSoc', this.evcc.setEvccLimitSoc, index, Number(val)),
             vehicleName: () => doAction('Set vehicleName', this.evcc.setEvccVehicle, index, val),
+            batteryBoost: () => void this.evcc.setLoadpointBatteryBoost(index, val),
+            batteryBoostLimit: () => void this.evcc.setLoadpointNumber(index, 'batteryboostlimit', val),
+            limitEnergy: () => void this.evcc.setLoadpointNumber(index, 'limitenergy', val),
+            priority: () => void this.evcc.setLoadpointNumber(index, 'priority', val),
             smartCostLimit: () => doAction('Set smartCostLimit', this.evcc.setEvccsmartCostLimitLoadpoint, index, val),
         };
         // --- Wenn direkte Aktion existiert ---
@@ -538,6 +553,11 @@ class Evcc extends utils.Adapter {
             for (const [vehicleKey, vehicle] of Object.entries(respData.vehicles ?? {})) {
                 await this.setVehicleData(vehicleKey, vehicle);
             }
+            // Objektbaum einmal nach dem Start und nach jedem evcc-Neustart abgleichen (entfernte Ladepunkte/Fahrzeuge)
+            if (this.structureSyncPending && respData.startupCompleted !== false) {
+                await this.removeObsoleteObjects(loadpoints.length, Object.keys(respData.vehicles ?? {}));
+                this.structureSyncPending = false;
+            }
             if (!this.stopping) {
                 if (this.evccReachable === false) {
                     this.log.info(`Connection to evcc at http://${this.ip} restored`);
@@ -566,12 +586,107 @@ class Evcc extends utils.Adapter {
             }
             if (reason !== null) {
                 this.evccReachable = false;
+                // evcc startet ggf. mit geänderter Konfiguration neu: danach Objektbaum erneut abgleichen
+                this.structureSyncPending = true;
             }
             await this.setStateChangedAsync('info.connection', false, true);
         }
         finally {
             this.pollRunning = false;
         }
+    }
+    /**
+     * Löscht die Objekte von Ladepunkten und Fahrzeugen, die es in evcc nicht mehr gibt.
+     *
+     * @param loadpointCount Anzahl der Ladepunkte, die evcc meldet
+     * @param vehicleNames Fahrzeuge, die evcc meldet
+     */
+    async removeObsoleteObjects(loadpointCount, vehicleNames) {
+        const objects = await this.getAdapterObjectsAsync();
+        const ids = Object.keys(objects).map(id => id.slice(this.namespace.length + 1));
+        const obsolete = (0, structure_1.findObsolete)(ids, loadpointCount, vehicleNames);
+        const prefixes = [
+            ...obsolete.loadpoints.map(index => `loadpoint.${index}`),
+            ...obsolete.vehicles.map(name => `vehicle.${name}`),
+        ];
+        for (const prefix of prefixes) {
+            this.log.info(`${prefix} does not exist in evcc anymore, removing its objects`);
+            await this.delObjectAsync(prefix, { recursive: true });
+            this.forgetObjects(prefix);
+        }
+        if (obsolete.loadpoints.length > 0) {
+            this.maxLoadpointIndex = Math.min(this.maxLoadpointIndex, loadpointCount);
+        }
+        for (const name of obsolete.vehicles) {
+            this.knownVehicles.delete(name);
+        }
+    }
+    /**
+     * Entfernt gelöschte Objekte aus den Laufzeit-Caches.
+     *
+     * @param prefix z. B. loadpoint.3 oder vehicle.db:7
+     */
+    forgetObjects(prefix) {
+        const inside = (id) => id === prefix || id.startsWith(`${prefix}.`);
+        for (const id of [...this.knownObjects.keys()].filter(inside)) {
+            this.knownObjects.delete(id);
+        }
+        for (const set of [this.statusIds, this.clearedIds]) {
+            for (const id of [...set].filter(inside)) {
+                set.delete(id);
+            }
+        }
+        this.parentTitles.delete(prefix);
+    }
+    /**
+     * Setzt beim Start einen zuvor gewählten externen Hausakku-Modus fort.
+     */
+    async resumeBatteryMode() {
+        const state = await this.getStateAsync('control.batteryMode');
+        if (state && (0, batteryMode_1.isBatteryModeRequest)(state.val) && state.val !== 'off') {
+            this.log.info(`Home battery mode "${state.val}" is set in control.batteryMode, continuing it`);
+            await this.setBatteryMode(state.val);
+        }
+    }
+    /**
+     * Setzt den externen Hausakku-Modus in evcc (oder gibt die Steuerung mit off an evcc zurück).
+     * evcc setzt den Modus laut API-Dokumentation nach 60 s zurück, der Adapter wiederholt ihn daher alle 30 s.
+     *
+     * @param val Wert aus control.batteryMode
+     */
+    async setBatteryMode(val) {
+        if (!(0, batteryMode_1.isBatteryModeRequest)(val)) {
+            this.log.warn(`control.batteryMode: invalid value "${String(val)}"`);
+            return;
+        }
+        this.clearInterval(this.batteryModeTimer);
+        this.batteryModeTimer = undefined;
+        const result = await this.evcc.setExternalBatteryMode(val);
+        if (result === null) {
+            // evcc nicht erreichbar: Wunsch merken und weiter versuchen
+            if (val !== 'off') {
+                this.startBatteryModeRefresh(val);
+            }
+            return;
+        }
+        if (val !== 'off' && result !== val) {
+            this.log.warn(`evcc did not accept home battery mode "${val}" – a battery that evcc can control is required`);
+            await this.setStateAsync('control.batteryMode', 'off', true);
+            return;
+        }
+        this.log.info(val === 'off' ? 'Home battery is controlled by evcc again' : `Home battery mode set to "${val}"`);
+        await this.setStateAsync('control.batteryMode', val, true);
+        if (val !== 'off') {
+            this.startBatteryModeRefresh(val);
+        }
+    }
+    /**
+     * Wiederholt den externen Hausakku-Modus regelmäßig, damit evcc ihn nicht zurücksetzt.
+     *
+     * @param mode aktiver Modus
+     */
+    startBatteryModeRefresh(mode) {
+        this.batteryModeTimer = this.setInterval(() => void this.evcc.setExternalBatteryMode(mode, true), batteryMode_1.BATTERY_MODE_REFRESH_MS);
     }
     /**
      * Gleicht beim Start alle vorhandenen Status-Objekte an die aktuellen Rollen/Typen an und merkt sie sich.
@@ -794,6 +909,7 @@ class Evcc extends utils.Adapter {
      * @param title Fahrzeugname für das Geräte-Objekt
      */
     async createVehicleObjects(vehicleIndex, title) {
+        this.parentTitles.set(`vehicle.${vehicleIndex}`, title);
         await this.ensureParents((0, objects_1.vehicleParents)(vehicleIndex, title));
         await this.ensureStates(`vehicle.${vehicleIndex}`, objects_1.VEHICLE_STATES);
     }
@@ -808,6 +924,10 @@ class Evcc extends utils.Adapter {
         if (!this.knownVehicles.has(vehicleIndex)) {
             await this.createVehicleObjects(vehicleIndex, vehicleData.title ?? '');
             this.knownVehicles.add(vehicleIndex);
+        }
+        else if (this.parentTitles.get(`vehicle.${vehicleIndex}`) !== (vehicleData.title ?? '')) {
+            await this.extendObjectAsync(`vehicle.${vehicleIndex}`, { common: { name: vehicleData.title || vehicleIndex } });
+            this.parentTitles.set(`vehicle.${vehicleIndex}`, vehicleData.title ?? '');
         }
         const base = `vehicle.${vehicleIndex}`;
         // evcc liefert den Plan als vehicles[x].plan, ältere Versionen als plans[]
@@ -835,11 +955,17 @@ class Evcc extends utils.Adapter {
         //Ladepunkt kann es X fach geben
         index = index + 1; // +1 why Evcc starts with 1
         this.log.debug(`Ladepunkt mit index ` + `loadpoint.${index} gefunden...`);
+        const title = typeof loadpoint.title === 'string' ? loadpoint.title : '';
         if (this.maxLoadpointIndex < index) {
             //Ladepunkt noch nicht angelegt für diesen Instanzstart
-            this.log.info(`Lege neuen Ladepunkt an mit Index: ${index}`);
-            await this.createLoadPoint(index, typeof loadpoint.title === 'string' ? loadpoint.title : '');
+            this.log.debug(`Create loadpoint ${index} (${title})`);
+            await this.createLoadPoint(index, title);
             this.maxLoadpointIndex = index;
+        }
+        else if (this.parentTitles.get(`loadpoint.${index}`) !== title) {
+            // in evcc umbenannt oder Reihenfolge geändert: Gerätenamen nachziehen
+            await this.extendObjectAsync(`loadpoint.${index}`, { common: { name: title || `Loadpoint ${index}` } });
+            this.parentTitles.set(`loadpoint.${index}`, title);
         }
         //Update der Werte (gesammelt, gebündelt geschrieben)
         const control = `loadpoint.${index}.control`;
@@ -852,6 +978,10 @@ class Evcc extends utils.Adapter {
             { id: `${control}.smartCostLimit`, val: loadpoint.smartCostLimit ?? 0 },
             { id: `${control}.limitSoc`, val: loadpoint.limitSoc },
             { id: `${control}.vehicleName`, val: loadpoint.vehicleName },
+            { id: `${control}.batteryBoost`, val: loadpoint.batteryBoost === undefined ? undefined : Boolean(loadpoint.batteryBoost) },
+            { id: `${control}.batteryBoostLimit`, val: loadpoint.batteryBoostLimit },
+            { id: `${control}.limitEnergy`, val: loadpoint.limitEnergy },
+            { id: `${control}.priority`, val: loadpoint.priority },
         ];
         // Mode: evcc >= 0.316.0 reports smart + alwaysCharge, older versions pv/minpv
         this.smartModeApi = (0, mode_1.hasSmartModeApi)(loadpoint);
@@ -909,6 +1039,7 @@ class Evcc extends utils.Adapter {
      * @param title Name des Ladepunkts in evcc
      */
     async createLoadPoint(index, title) {
+        this.parentTitles.set(`loadpoint.${index}`, title);
         await this.ensureParents((0, objects_1.loadpointParents)(index, title));
         await this.ensureStates(`loadpoint.${index}.control`, (0, objects_1.loadpointControlStates)(this.currency, PV_CONTROL_STATES));
         await this.ensureStates(`loadpoint.${index}.control.plan`, objects_1.LOADPOINT_PLAN_STATES);

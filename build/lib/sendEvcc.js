@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SendEvcc = void 0;
 //Funktionen zum sterun von evcc
 const axios_1 = __importDefault(require("axios"));
+const batteryMode_1 = require("./batteryMode");
 class SendEvcc {
     ip;
     timeout;
@@ -307,6 +308,53 @@ class SendEvcc {
      */
     setEvccsmartCostLimit(value) {
         return this.setOrDeleteLimit('smartcostlimit', value, 'setEvccsmartCostLimit');
+    }
+    /**
+     * Sets or removes the external battery mode. evcc resets it after 60 s, so it has to be repeated.
+     *
+     * @param mode requested mode, off removes the external mode
+     * @param quiet true for the regular repetition: errors only in the debug log (the poll already warns)
+     * @returns external mode reported by evcc ('' = none), or null if the request failed
+     */
+    async setExternalBatteryMode(mode, quiet = false) {
+        const off = mode === 'off';
+        const url = `http://${this.ip}/api/batterymode${off ? '' : `/${mode}`}`;
+        this.log.debug(`call ${off ? 'DELETE' : 'POST'}: ${url}`);
+        try {
+            const response = await axios_1.default.request({ method: off ? 'delete' : 'post', url, timeout: this.timeout });
+            return (0, batteryMode_1.externalModeFromResponse)(response.data);
+        }
+        catch (error) {
+            (quiet ? this.log.debug : this.log.error)(`setExternalBatteryMode failed: ${error.message}`);
+            return null;
+        }
+    }
+    /**
+     * Switches battery boost of a loadpoint on or off.
+     *
+     * @param index loadpoint index (starts with 1)
+     * @param value true = on
+     * @returns resolves true on success
+     */
+    setLoadpointBatteryBoost(index, value) {
+        const on = value === true || value === 'true' || value === 1 || value === '1';
+        return this.request('post', `loadpoints/${index}/batteryboost/${on}`, 'setLoadpointBatteryBoost');
+    }
+    /**
+     * Sets a numeric loadpoint value (batteryboostlimit, limitenergy, priority).
+     *
+     * @param index loadpoint index (starts with 1)
+     * @param path API path below the loadpoint, e.g. limitenergy
+     * @param value value, must be a number >= 0
+     * @returns resolves true on success
+     */
+    setLoadpointNumber(index, path, value) {
+        const numericValue = Number(value);
+        if (value === null || value === '' || !Number.isFinite(numericValue) || numericValue < 0) {
+            this.log.warn(`${path}: invalid value "${String(value)}"`);
+            return Promise.resolve(false);
+        }
+        return this.request('post', `loadpoints/${index}/${path}/${numericValue}`, `set ${path}`);
     }
     /**
      * Sets the battery grid charge limit, 0 removes it.
