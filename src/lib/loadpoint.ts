@@ -32,4 +32,8 @@ export interface Loadpoint {
     limitSoc: number;
     vehicleName: string;
     smartCostLimit: number | null; // null = no limit
+    batteryBoost?: boolean | number;
+    batteryBoostLimit?: number;
+    limitEnergy?: number;
+    priority?: number;
 }

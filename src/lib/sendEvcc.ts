@@ -1,6 +1,7 @@
 //Funktionen zum sterun von evcc
 import axios from 'axios';
 import type { EvccAlwaysCharge, EvccMode } from './mode';
+import { externalModeFromResponse, type BatteryModeRequest } from './batteryMode';
 
 export class SendEvcc {
     private readonly ip: string;
@@ -326,6 +327,55 @@ export class SendEvcc {
      */
     setEvccsmartCostLimit(value: ioBroker.StateValue): Promise<boolean> {
         return this.setOrDeleteLimit('smartcostlimit', value, 'setEvccsmartCostLimit');
+    }
+
+    /**
+     * Sets or removes the external battery mode. evcc resets it after 60 s, so it has to be repeated.
+     *
+     * @param mode requested mode, off removes the external mode
+     * @param quiet true for the regular repetition: errors only in the debug log (the poll already warns)
+     * @returns external mode reported by evcc ('' = none), or null if the request failed
+     */
+    async setExternalBatteryMode(mode: BatteryModeRequest, quiet = false): Promise<string | null> {
+        const off = mode === 'off';
+        const url = `http://${this.ip}/api/batterymode${off ? '' : `/${mode}`}`;
+        this.log.debug(`call ${off ? 'DELETE' : 'POST'}: ${url}`);
+        try {
+            const response = await axios.request({ method: off ? 'delete' : 'post', url, timeout: this.timeout });
+            return externalModeFromResponse(response.data);
+        } catch (error: any) {
+            (quiet ? this.log.debug : this.log.error)(`setExternalBatteryMode failed: ${error.message}`);
+            return null;
+        }
+    }
+
+    /**
+     * Switches battery boost of a loadpoint on or off.
+     *
+     * @param index loadpoint index (starts with 1)
+     * @param value true = on
+     * @returns resolves true on success
+     */
+    setLoadpointBatteryBoost(index: string, value: ioBroker.StateValue): Promise<boolean> {
+        const on = value === true || value === 'true' || value === 1 || value === '1';
+        return this.request('post', `loadpoints/${index}/batteryboost/${on}`, 'setLoadpointBatteryBoost');
+    }
+
+    /**
+     * Sets a numeric loadpoint value (batteryboostlimit, limitenergy, priority).
+     *
+     * @param index loadpoint index (starts with 1)
+     * @param path API path below the loadpoint, e.g. limitenergy
+     * @param value value, must be a number >= 0
+     * @returns resolves true on success
+     */
+    setLoadpointNumber(index: string, path: string, value: ioBroker.StateValue): Promise<boolean> {
+        const numericValue = Number(value);
+        if (value === null || value === '' || !Number.isFinite(numericValue) || numericValue < 0) {
+            this.log.warn(`${path}: invalid value "${String(value)}"`);
+            return Promise.resolve(false);
+        }
+        return this.request('post', `loadpoints/${index}/${path}/${numericValue}`, `set ${path}`);
     }
 
     /**

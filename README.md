@@ -63,7 +63,27 @@ Everything below `control` can be changed – the adapter sends the new value to
 | `loadpoint.X.control.alwaysCharge` | `on`: in smart mode always charge at least with minimum power, `once`: only until the vehicle is disconnected, `off` |
 | `loadpoint.X.control.limitSoc` | charge up to this level (%) |
 | `loadpoint.X.control.minCurrent` / `.maxCurrent` | minimum / maximum charging current (A) |
+| `loadpoint.X.control.batteryBoost` | `true`: also use the home battery for charging, down to `batteryBoostLimit` (%). With `batteryBoostLimit` = 100 the boost is off |
+| `loadpoint.X.control.limitEnergy` | charge only this energy (kWh), for guest vehicles or vehicles without charge level. Removed by evcc when the vehicle is unplugged |
+| `loadpoint.X.control.priority` | with several loadpoints, the one with the higher priority gets the solar power first |
 | `loadpoint.X.control.pv` / `.min` | old buttons, still work (smart without / with always charge) |
+
+## Home battery
+
+If evcc controls your home battery, ioBroker can set its mode with `control.batteryMode`:
+
+| Value | What happens |
+|---|---|
+| `off` | evcc controls the battery itself (default) |
+| `normal` | normal operation |
+| `hold` | the battery is not discharged |
+| `charge` | the battery is charged from the grid |
+| `holdcharge` | the battery is not charged |
+| `discharge` | the battery is discharged to the grid |
+
+The mode stays active until you set `off` again – the adapter repeats it to evcc every 30 s, because evcc falls back
+to its own control after one minute without a new request. While a mode is set, evcc's own battery rules (e.g. price
+limit) do not apply. If evcc cannot control a battery, the adapter writes a warning and sets the value back to `off`.
 
 ## Charging plan
 
@@ -83,6 +103,8 @@ Set `time` and `soc`/`energy` first, then `active = true`. The same works per ve
 
 - **evcc restarts (e.g. updates):** the adapter writes one warning, sets `info.connection` to `false` and reconnects
   automatically. When evcc is back, an info message appears in the log.
+- **Changes in evcc** (new, removed or renamed loadpoints and vehicles) are taken over automatically. Objects of
+  loadpoints and vehicles that no longer exist in evcc are deleted after the adapter start or an evcc restart.
 - **Values evcc does not report anymore** (e.g. the remaining charging time after charging) are set to empty (`null`).
 - **Scripts from older versions:** since evcc 0.316 `loadpoint.X.status.mode` shows `smart` instead of `pv` / `minpv`.
   Use `loadpoint.X.control.pvControl` to tell the modes apart.
@@ -94,6 +116,9 @@ Set `time` and `soc`/`energy` first, then `active = true`. The same works per ve
     ### **WORK IN PROGRESS**
 -->
 ### **WORK IN PROGRESS**
+* (Schimi1983) new: `control.batteryMode` sets the home battery mode in evcc (normal, hold, charge, holdcharge, discharge) and keeps it active, `off` returns control to evcc
+* (Schimi1983) new per loadpoint: `batteryBoost`, `batteryBoostLimit`, `limitEnergy`, `priority`
+* (Schimi1983) loadpoints and vehicles removed in evcc are deleted, renamed ones get their new name (checked after start and after an evcc restart)
 * (Schimi1983) evcc not reachable (e.g. restart/update): one warning instead of an error on every poll, info message when the connection is restored
 * (Schimi1983) values evcc does not report anymore (e.g. `fatal`, remaining charging time) are set to `null` instead of keeping the last value
 * (Schimi1983) existing status objects are updated to the current roles at start, also for values evcc currently does not report

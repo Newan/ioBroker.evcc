@@ -1,11 +1,4 @@
 "use strict";
-/**
- * Object definitions (object tree, roles, units) of the writable states.
- *
- * Roles follow https://github.com/ioBroker/ioBroker.docs/blob/master/docs/en/dev/stateroles.md:
- * writable numbers use `level.*`, writable booleans `switch`, write-only booleans `button.*`, strings `text`.
- * Read-only status values get their role from units.ts.
- */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.VEHICLE_STATES = exports.LOADPOINT_PLAN_STATES = void 0;
 exports.priceUnit = priceUnit;
@@ -13,6 +6,7 @@ exports.siteControlStates = siteControlStates;
 exports.loadpointControlStates = loadpointControlStates;
 exports.loadpointParents = loadpointParents;
 exports.vehicleParents = vehicleParents;
+const batteryMode_1 = require("./batteryMode");
 /**
  * Price unit for limits and tariffs.
  *
@@ -61,6 +55,18 @@ function siteControlStates(currency) {
         { id: 'prioritySoc', common: percentLevel('prioritySoc') },
         { id: 'smartCostLimit', common: priceLimit('smartCostLimit 0 = delete') },
         { id: 'batteryGridChargeLimit', common: priceLimit('batteryGridChargeLimit 0 = delete') },
+        {
+            id: 'batteryMode',
+            common: {
+                name: 'home battery mode set by ioBroker (off = evcc controls the battery)',
+                type: 'string',
+                role: 'text',
+                read: true,
+                write: true,
+                def: 'off',
+                states: { ...batteryMode_1.BATTERY_MODE_STATES },
+            },
+        },
     ];
 }
 /**
@@ -129,6 +135,28 @@ function loadpointControlStates(currency, pvControlStates) {
             id: 'vehicleName',
             common: { name: 'vehicleName', type: 'string', role: 'text', read: true, write: true },
         },
+        {
+            id: 'batteryBoost',
+            common: {
+                name: 'battery boost: support charging with the home battery',
+                type: 'boolean',
+                role: 'switch',
+                read: true,
+                write: true,
+            },
+        },
+        {
+            id: 'batteryBoostLimit',
+            common: { ...percentLevel('battery boost down to this home battery SoC (100 = boost off)') },
+        },
+        {
+            id: 'limitEnergy',
+            common: {
+                ...level('charge this energy (guest vehicle / vehicle without SoC, 0 = no limit)', 'kWh'),
+                min: 0,
+            },
+        },
+        { id: 'priority', common: { name: 'priority (higher is served first)', type: 'number', role: 'level', read: true, write: true, min: 0 } },
     ];
 }
 /** States below `loadpoint.<index>.control.plan` (issue #73) */
