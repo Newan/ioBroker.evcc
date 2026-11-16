@@ -11,6 +11,7 @@ exports.EVCC_FIELD_META = exports.CURRENCY_PLACEHOLDER = void 0;
 exports.currencySymbol = currencySymbol;
 exports.getFieldMeta = getFieldMeta;
 exports.stateType = stateType;
+exports.statusCommon = statusCommon;
 /** Placeholder replaced by the currency configured in evcc. */
 exports.CURRENCY_PLACEHOLDER = '{currency}';
 const power = { unit: 'W', role: 'value.power' };
@@ -122,5 +123,18 @@ function getFieldMeta(field, valueType, currency = '€') {
  */
 function stateType(valueType) {
     return valueType === 'object' ? 'string' : valueType;
+}
+/**
+ * Expected common of a read-only status state, used when creating it and to update objects of older versions.
+ *
+ * @param field field name as in /api/state
+ * @param valueType typeof the value, or common.type of an existing object (object/json/array = JSON string)
+ * @param currency currency symbol used for price units
+ * @returns role, type and unit (optional)
+ */
+function statusCommon(field, valueType, currency = '€') {
+    const jsonTypes = ['object', 'json', 'array'];
+    const type = jsonTypes.includes(valueType) ? 'object' : valueType;
+    return { ...getFieldMeta(field, type, currency), type: stateType(type) };
 }
 //# sourceMappingURL=units.js.map

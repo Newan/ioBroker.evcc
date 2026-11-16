@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.EVCC_CONTROL_MAPPING = void 0;
 exports.formatDuration = formatDuration;
 exports.normalizeHost = normalizeHost;
+exports.describeRequestError = describeRequestError;
 exports.isIgnoredEvccEntry = isIgnoredEvccEntry;
 exports.isEmptyEvccValue = isEmptyEvccValue;
 exports.capitalizeFirst = capitalizeFirst;
@@ -56,6 +57,21 @@ function normalizeHost(raw) {
         .replace(/^https?:\/\//i, '')
         .replace(/\/.*$/, '')
         .trim();
+}
+/**
+ * Short, readable reason for a failed request to evcc (network error code or HTTP status).
+ *
+ * @param error error thrown by axios
+ * @returns reason like ECONNREFUSED or HTTP 404, or null if it is not a request error
+ */
+function describeRequestError(error) {
+    if (!axios_1.default.isAxiosError(error)) {
+        return null;
+    }
+    if (error.response) {
+        return `HTTP ${error.response.status}`;
+    }
+    return error.code ?? error.message;
 }
 function isIgnoredEvccEntry(entry) {
     return ['result', 'vehicles', 'loadpoints', 'feedin', 'planer', 'planner', 'forecast'].includes(entry);

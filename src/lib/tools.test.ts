@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { formatDuration, normalizeHost } from './tools';
+import { AxiosError } from 'axios';
+import { describeRequestError, formatDuration, normalizeHost } from './tools';
 
 describe('tools => formatDuration', () => {
     it('formats seconds as hh:mm:ss', () => {
@@ -37,5 +38,19 @@ describe('tools => normalizeHost', () => {
         assert.strictEqual(normalizeHost(undefined), '');
         assert.strictEqual(normalizeHost('   '), '');
         assert.strictEqual(normalizeHost('http://'), '');
+    });
+});
+
+describe('tools => describeRequestError', () => {
+    it('returns the network code or HTTP status of axios errors', () => {
+        const refused = new AxiosError('connect ECONNREFUSED 192.168.1.238:7070', 'ECONNREFUSED');
+        assert.strictEqual(describeRequestError(refused), 'ECONNREFUSED');
+        const notFound = new AxiosError('Request failed', 'ERR_BAD_REQUEST', undefined, undefined, {
+            status: 404,
+        } as never);
+        assert.strictEqual(describeRequestError(notFound), 'HTTP 404');
+    });
+    it('returns null for other errors', () => {
+        assert.strictEqual(describeRequestError(new TypeError('x is undefined')), null);
     });
 });

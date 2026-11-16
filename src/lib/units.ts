@@ -129,3 +129,21 @@ export function getFieldMeta(field: string, valueType: string, currency = '€')
 export function stateType(valueType: string): ioBroker.CommonType {
     return valueType === 'object' ? 'string' : (valueType as ioBroker.CommonType);
 }
+
+/**
+ * Expected common of a read-only status state, used when creating it and to update objects of older versions.
+ *
+ * @param field field name as in /api/state
+ * @param valueType typeof the value, or common.type of an existing object (object/json/array = JSON string)
+ * @param currency currency symbol used for price units
+ * @returns role, type and unit (optional)
+ */
+export function statusCommon(
+    field: string,
+    valueType: string,
+    currency = '€',
+): { role: string; type: ioBroker.CommonType; unit?: string } {
+    const jsonTypes = ['object', 'json', 'array'];
+    const type = jsonTypes.includes(valueType) ? 'object' : valueType;
+    return { ...getFieldMeta(field, type, currency), type: stateType(type) };
+}

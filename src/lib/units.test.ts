@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { currencySymbol, getFieldMeta, stateType } from './units';
+import { currencySymbol, getFieldMeta, stateType, statusCommon } from './units';
 
 describe('units => getFieldMeta', () => {
     it('returns unit and role for known numeric fields', () => {
@@ -37,5 +37,14 @@ describe('units => currencySymbol', () => {
         assert.strictEqual(currencySymbol('EUR'), '€');
         assert.strictEqual(currencySymbol('CHF'), 'CHF');
         assert.strictEqual(currencySymbol(undefined), '€');
+    });
+});
+
+describe('units => statusCommon', () => {
+    it('maps existing JSON objects to json/string and keeps known roles', () => {
+        assert.deepStrictEqual(statusCommon('fatal', 'object'), { role: 'json', type: 'string' });
+        assert.deepStrictEqual(statusCommon('circuitsConfig', 'json'), { role: 'json', type: 'string' });
+        assert.deepStrictEqual(statusCommon('availableVersion', 'string'), { role: 'text', type: 'string' });
+        assert.deepStrictEqual(statusCommon('pvRemaining', 'number'), { role: 'value.timer', type: 'number', unit: 's' });
     });
 });

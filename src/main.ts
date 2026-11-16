@@ -1,6 +1,7 @@
 import * as utils from '@iobroker/adapter-core';
 import axios from 'axios';
 import {
+    describeRequestError,
     EVCC_CONTROL_MAPPING,
     formatDuration,
     normalizeHost,
@@ -9,7 +10,8 @@ import {
     isIgnoredEvccEntry,
 } from './lib/tools';
 import type { Loadpoint } from './lib/loadpoint';
-import { currencySymbol, getFieldMeta, stateType } from './lib/units';
+import { currencySymbol, statusCommon } from './lib/units';
+import { findMissing, statusKeyOf } from './lib/stale';
 import {
     LOADPOINT_PLAN_STATES,
     loadpointControlStates,
@@ -74,6 +76,12 @@ class Evcc extends utils.Adapter {
     private currency = '€';
     /** Währung, mit der die Preis-Limits unter control angelegt wurden */
     private controlCurrency = '';
+    /** Verbindungszustand zu evcc (undefined = noch keine Abfrage), für einmalige Log-Meldungen */
+    private evccReachable: boolean | undefined = undefined;
+    /** bekannte Status-States (status.*, loadpoint.X.status.*), relativ zur Instanz */
+    private readonly statusIds = new Set<string>();
+    /** Status-States, die evcc nicht mehr liefert und die schon auf null gesetzt wurden */
+    private readonly clearedIds = new Set<string>();
     /** true sobald der Adapter beendet wird: laufende Abfrage schreibt nichts mehr */
     private stopping = false;
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
@@ -113,6 +121,7 @@ class Evcc extends utils.Adapter {
         this.evcc = new SendEvcc(this.ip, this.timeout, this.log);
 
         await this.createEvccControl();
+        await this.alignStatusObjects();
         // beschreibbare States: einmal per Muster statt je State abonnieren
         this.subscribeStates('control.*');
         this.subscribeStates('loadpoint.*.control.*');
@@ -593,7 +602,11 @@ class Evcc extends utils.Adapter {
             }
 
             if (!this.stopping) {
-                await this.setStateAsync('info.connection', true, true);
+                if (this.evccReachable === false) {
+                    this.log.info(`Connection to evcc at http://${this.ip} restored`);
+                }
+                this.evccReachable = true;
+                await this.setStateChangedAsync('info.connection', true, true);
                 this.log.debug(`Poll finished in ${Date.now() - pollStart} ms`);
             }
         } catch (error: any) {
@@ -601,10 +614,75 @@ class Evcc extends utils.Adapter {
                 // Beim Beenden ist die Datenbank ggf. schon geschlossen: kein Fehler
                 return;
             }
-            this.log.error(error?.message ?? String(error));
-            await this.setStateAsync('info.connection', false, true);
+            const reason = describeRequestError(error);
+            if (reason === null) {
+                // kein Verbindungsproblem, sondern ein Fehler beim Verarbeiten der Daten
+                this.log.error(error?.message ?? String(error));
+            } else if (this.evccReachable !== false) {
+                // evcc nicht erreichbar (z. B. Neustart/Update): einmal warnen, info.connection zeigt den Zustand
+                this.log.warn(
+                    `evcc at http://${this.ip} not reachable (${reason}), retrying every ${this.polltime} s`,
+                );
+            } else {
+                this.log.debug(`evcc still not reachable (${reason})`);
+            }
+            if (reason !== null) {
+                this.evccReachable = false;
+            }
+            await this.setStateChangedAsync('info.connection', false, true);
         } finally {
             this.pollRunning = false;
+        }
+    }
+
+    /**
+     * Gleicht beim Start alle vorhandenen Status-Objekte an die aktuellen Rollen/Typen an und merkt sie sich.
+     * Felder, die evcc gerade nicht liefert, würden sonst erst angepasst, wenn evcc sie wieder sendet.
+     */
+    private async alignStatusObjects(): Promise<void> {
+        const objects = await this.getAdapterObjectsAsync();
+        for (const [fullId, obj] of Object.entries(objects)) {
+            const id = fullId.slice(this.namespace.length + 1);
+            if (!statusKeyOf(id)) {
+                continue;
+            }
+            if (obj.type === 'channel' && (obj.common as { role?: string }).role !== undefined) {
+                // Kanäle haben keine State-Rolle (ältere Versionen setzten role: value)
+                const { role: _role, ...common } = obj.common as ioBroker.ChannelCommon & { role?: string };
+                await this.setObjectAsync(id, { type: 'channel', common, native: obj.native ?? {} });
+                continue;
+            }
+            if (obj.type !== 'state') {
+                continue;
+            }
+            this.statusIds.add(id);
+            const common = obj.common;
+            const expected = statusCommon(id.split('.').pop() ?? '', common.type ?? 'mixed', this.currency);
+            if (common.role !== expected.role || common.type !== expected.type) {
+                await this.extendObjectAsync(id, { common: { role: expected.role, type: expected.type } });
+            }
+        }
+    }
+
+    /**
+     * Setzt Status-States, die evcc nicht mehr liefert, einmalig auf null (z. B. fatal, Restladezeit nach dem Laden).
+     *
+     * @param scope status oder loadpoint.X.status
+     * @param presentKeys Felder der aktuellen evcc-Antwort
+     * @param writes Sammlung der zu schreibenden Werte
+     */
+    private clearMissing(scope: string, presentKeys: string[], writes: StateWrite[]): void {
+        const missing = new Set(findMissing(this.statusIds, scope, presentKeys));
+        for (const id of missing) {
+            if (!this.clearedIds.has(id)) {
+                writes.push({ id, val: null });
+                this.clearedIds.add(id);
+            }
+        }
+        for (const id of this.clearedIds) {
+            if (statusKeyOf(id)?.scope === scope && !missing.has(id)) {
+                this.clearedIds.delete(id);
+            }
         }
     }
 
@@ -686,23 +764,16 @@ class Evcc extends utils.Adapter {
      * @param type typeof des Werts
      */
     private async ensureEvccState(path: string, name: string, type: string): Promise<void> {
-        const meta = getFieldMeta(name, type, this.currency);
         await this.ensureObjectOnce(
             path,
             {
                 type: 'state',
-                common: {
-                    role: meta.role,
-                    name,
-                    type: stateType(type),
-                    read: true,
-                    write: false,
-                    ...(meta.unit ? { unit: meta.unit } : {}),
-                },
+                common: { name, read: true, write: false, ...statusCommon(name, type, this.currency) },
                 native: {},
             },
             'extend',
         );
+        this.statusIds.add(path);
     }
 
     /**
@@ -801,6 +872,7 @@ class Evcc extends utils.Adapter {
             await this.writeEvccState(`status.${lpEntry}`, lpEntry, lpData, writes);
         }
 
+        this.clearMissing('status', Object.keys(daten), writes);
         await this.flushStates(writes);
     }
 
@@ -913,6 +985,7 @@ class Evcc extends utils.Adapter {
 
         //Alle Werte unter Status veröffentlichen
         await this.setStatusLoadPoint(loadpoint, index, writes);
+        this.clearMissing(`loadpoint.${index}.status`, Object.keys(loadpoint), writes);
         await this.flushStates(writes);
     }
 
@@ -931,23 +1004,17 @@ class Evcc extends utils.Adapter {
                 lpType = 'string';
             }
 
-            const meta = getFieldMeta(lpEntry, lpType, this.currency);
+            const id = `loadpoint.${index}.status.${lpEntry}`;
             await this.ensureObjectOnce(
-                `loadpoint.${index}.status.${lpEntry}`,
+                id,
                 {
                     type: 'state',
-                    common: {
-                        name: lpEntry,
-                        type: stateType(lpType),
-                        read: true,
-                        write: false,
-                        role: meta.role,
-                        ...(meta.unit ? { unit: meta.unit } : {}),
-                    },
+                    common: { name: lpEntry, read: true, write: false, ...statusCommon(lpEntry, lpType, this.currency) },
                     native: {},
                 },
                 'extend',
             );
+            this.statusIds.add(id);
 
             writes.push({ id: `loadpoint.${index}.status.${lpEntry}`, val: res });
         }
