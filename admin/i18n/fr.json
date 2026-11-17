@@ -7,7 +7,7 @@
     "host_error": "Veuillez saisir un hôte ou une adresse IP sans http:// et sans chemin",
     "host_help": "Adresse IP ou nom d'hôte de votre installation evcc, sans http://",
     "polltime": "Intervalle d'interrogation",
-    "polltime_help": "Fréquence d'interrogation d'evcc. Plus court = valeurs plus actuelles, mais plus de charge.",
+    "polltime_help": "evcc envoie normalement les modifications immédiatement. L'intervalle n'est utilisé que si cette connexion en direct n'est pas possible.",
     "port": "Port",
     "port_help": "Port de l'interface web d'evcc (7070 par défaut)",
     "test_connection": "Tester la connexion",

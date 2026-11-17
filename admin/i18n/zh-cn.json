@@ -7,7 +7,7 @@
     "host_error": "请输入不带 http:// 和路径的主机或 IP 地址",
     "host_help": "evcc 安装的 IP 地址或主机名，不带 http://",
     "polltime": "轮询间隔",
-    "polltime_help": "读取 evcc 的频率。越短数值越新，但负载越高。",
+    "polltime_help": "evcc 通常会立即发送变化。只有在无法建立实时连接时才使用此间隔。",
     "port": "端口",
     "port_help": "evcc 网页界面的端口（默认 7070）",
     "test_connection": "测试连接",

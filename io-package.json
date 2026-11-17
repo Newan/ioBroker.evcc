@@ -142,7 +142,7 @@
     "compact": true,
     "tier": 2,
     "connectionType": "local",
-    "dataSource": "poll",
+    "dataSource": "push",
     "adminUI": {
       "config": "json",
       "tab": "materialize"
