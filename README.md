@@ -115,7 +115,7 @@ Set `time` and `soc`/`energy` first, then `active = true`. The same works per ve
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.3.3 (2026-11-17)
 * (Schimi1983) new: `control.batteryMode` sets the home battery mode in evcc (normal, hold, charge, holdcharge, discharge) and keeps it active, `off` returns control to evcc
 * (Schimi1983) new per loadpoint: `batteryBoost`, `batteryBoostLimit`, `limitEnergy`, `priority`
 * (Schimi1983) loadpoints and vehicles removed in evcc are deleted, renamed ones get their new name (checked after start and after an evcc restart)
@@ -158,9 +158,6 @@ Set `time` and `soc`/`energy` first, then `active = true`. The same works per ve
 
 ### 0.2.10 (2026-07-15)
 * (arteck) add configurable weather forcast grid
-
-### 0.2.9 (2026-07-15)
-* (arteck) add grid request
 
 [Older changelogs can be found there](CHANGELOG_OLD.md)
 

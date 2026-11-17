@@ -1,4 +1,7 @@
 # Older changes
+## 0.2.9 (2026-07-15)
+* (arteck) add grid request
+
 ## 0.2.8 (2026-03-09)
 * (arteck) reduce read request, static dp read only once
 
