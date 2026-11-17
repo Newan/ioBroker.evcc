@@ -1,7 +1,7 @@
 {
   "name": "iobroker.evcc",
   "version": "0.3.3",
-  "description": "Controll evcc over rest api",
+  "description": "Show and control evcc (solar charging of electric cars, home battery) with live values",
   "author": {
     "name": "Newan",
     "email": "info@newan.de"

@@ -109,23 +109,27 @@
       "zh-cn": "EVCC"
     },
     "desc": {
-      "en": "Control evcc over REST API",
-      "de": "Steuern Sie evcc über die REST-API",
-      "uk": "Керуйте evcc через REST API",
-      "ru": "Управляйте evcc через REST API",
-      "pt": "Controlar o evcc através da REST API",
-      "nl": "Bedien evcc via REST API",
-      "fr": "Contrôler evcc via l'API REST",
-      "it": "Controllare evcc tramite REST API",
-      "es": "Controlar evcc mediante la API REST",
-      "pl": "Sterowanie evcc przez REST API",
-      "zh-cn": "通过 REST API 控制 evcc"
+      "en": "Show and control evcc (solar charging of electric cars, home battery) with live values",
+      "de": "evcc (PV-Überschussladen von E-Autos, Hausakku) mit Live-Werten anzeigen und steuern",
+      "uk": "Показ і керування evcc (заряджання електромобілів від сонця, домашній акумулятор) з даними в реальному часі",
+      "ru": "Отображение и управление evcc (зарядка электромобилей от солнца, домашний аккумулятор) с данными в реальном времени",
+      "pt": "Mostrar e controlar o evcc (carregamento solar de carros elétricos, bateria doméstica) com valores em tempo real",
+      "nl": "evcc (laden van elektrische auto's met zonne-energie, thuisbatterij) met live waarden tonen en bedienen",
+      "fr": "Afficher et piloter evcc (recharge solaire des voitures électriques, batterie domestique) avec des valeurs en direct",
+      "it": "Visualizzare e controllare evcc (ricarica solare delle auto elettriche, batteria domestica) con valori in tempo reale",
+      "es": "Mostrar y controlar evcc (carga solar de coches eléctricos, batería doméstica) con valores en tiempo real",
+      "pl": "Wyświetlanie i sterowanie evcc (ładowanie samochodów elektrycznych z PV, magazyn energii) z wartościami na żywo",
+      "zh-cn": "实时显示和控制 evcc（电动汽车光伏充电、家用电池）"
     },
     "authors": [
       "Newan <info@newan.de>"
     ],
     "keywords": [
-      "evcc pv charge"
+      "evcc",
+      "pv",
+      "wallbox",
+      "ev charging",
+      "home battery"
     ],
     "licenseInformation": {
       "license": "MIT",
