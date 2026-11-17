@@ -42,6 +42,8 @@ const tools_1 = require("./lib/tools");
 const units_1 = require("./lib/units");
 const stale_1 = require("./lib/stale");
 const structure_1 = require("./lib/structure");
+const socket_1 = require("./lib/socket");
+const writeCache_1 = require("./lib/writeCache");
 const batteryMode_1 = require("./lib/batteryMode");
 const objects_1 = require("./lib/objects");
 const plan_1 = require("./lib/plan");
@@ -49,6 +51,17 @@ const sendEvcc_1 = require("./lib/sendEvcc");
 const mode_1 = require("./lib/mode");
 /** Anzahl gleichzeitiger setState-Aufrufe beim Schreiben einer Abfrage */
 const WRITE_CONCURRENCY = 50;
+/**
+ * Felder, die evcc mit einem Wert meldet (null zählt als nicht gemeldet, so meldet die Live-Verbindung entfallene Werte).
+ *
+ * @param data evcc-Objekt
+ * @returns Feldnamen
+ */
+function presentKeys(data) {
+    return Object.entries(data)
+        .filter(([, value]) => value !== null && value !== undefined)
+        .map(([key]) => key);
+}
 /** Buttons (write-only): Auslösen wird mit ack = true bestätigt */
 const BUTTON_ACTIONS = new Set(['off', 'now', 'smart', 'min', 'pv']);
 /** Beschriftung der pvControl-Werte */
@@ -90,6 +103,17 @@ class Evcc extends utils.Adapter {
     structureSyncPending = true;
     /** Externer Hausakku-Modus, den der Adapter wiederholt an evcc sendet (evcc setzt ihn nach 60 s zurück) */
     batteryModeTimer = undefined;
+    /** Live-Verbindung (WebSocket): evcc schickt Änderungen sofort, die Abfrage per REST ist dann nur Rückfall */
+    socket = undefined;
+    /** zuletzt von evcc per WebSocket erhaltener Gesamtzustand, wird gebündelt verarbeitet */
+    pendingSocketState = undefined;
+    processTimer = undefined;
+    /** true während ein evcc-Zustand verarbeitet wird (REST oder WebSocket), nie parallel */
+    processing = false;
+    /** true während die Live-Verbindung Daten liefert (für eine einmalige Log-Info je Verbindung) */
+    socketActive = false;
+    /** zuletzt geschriebene Werte: unveränderte Werte werden nicht erneut geschrieben */
+    writeCache = new writeCache_1.WriteCache();
     /** true sobald der Adapter beendet wird: laufende Abfrage schreibt nichts mehr */
     stopping = false;
     constructor(options = {}) {
@@ -131,9 +155,14 @@ class Evcc extends utils.Adapter {
         this.subscribeStates('vehicle.*');
         await this.resumeBatteryMode();
         this.adapterStart = false;
+        // Erste Daten sofort per REST, danach Live-Verbindung; die Abfrage im Intervall läuft nur ohne Live-Verbindung
         void this.getEvccData();
-        //War alles ok, dann können wir die Daten abholen
-        this.adapterIntervals = this.setInterval(() => void this.getEvccData(), this.polltime * 1000);
+        this.startSocket();
+        this.adapterIntervals = this.setInterval(() => {
+            if (!this.socket?.isLive()) {
+                void this.getEvccData();
+            }
+        }, this.polltime * 1000);
         this.log.debug(`config ip: ${this.config.ip}`);
         this.log.debug(`config polltime: ${this.config.polltime}`);
     }
@@ -147,6 +176,8 @@ class Evcc extends utils.Adapter {
         try {
             this.clearInterval(this.adapterIntervals);
             this.clearInterval(this.batteryModeTimer);
+            this.clearTimeout(this.processTimer);
+            this.socket?.stop();
             callback();
         }
         catch {
@@ -216,7 +247,8 @@ class Evcc extends utils.Adapter {
      */
     async flushStates(writes) {
         // Felder, die evcc nicht liefert (undefined), nicht schreiben
-        const valid = writes.filter(w => w.val !== undefined);
+        // unveränderte Werte nicht erneut schreiben
+        const valid = writes.filter(w => w.val !== undefined && this.writeCache.update(w.id, w.val));
         let failed = 0;
         for (let i = 0; i < valid.length && !this.stopping; i += WRITE_CONCURRENCY) {
             // allSettled: ein einzelner fehlerhafter State bricht nicht die ganze Abfrage ab
@@ -224,6 +256,7 @@ class Evcc extends utils.Adapter {
             results.forEach((result, j) => {
                 if (result.status === 'rejected') {
                     failed++;
+                    this.writeCache.forget(valid[i + j].id);
                     this.log.debug(`setState ${valid[i + j].id} failed: ${String(result.reason)}`);
                 }
             });
@@ -242,6 +275,11 @@ class Evcc extends utils.Adapter {
         if (!state) {
             this.log.info(`state ${id} deleted`);
             return;
+        }
+        // von außen (Nutzer, Skript) geänderter Wert: beim nächsten Abgleich mit evcc wieder schreiben
+        const relativeId = id.slice(this.namespace.length + 1);
+        if (!this.writeCache.matches(relativeId, state.val)) {
+            this.writeCache.forget(relativeId);
         }
         if (state.ack) {
             return;
@@ -527,43 +565,15 @@ class Evcc extends utils.Adapter {
             this.log.debug(`call: http://${this.ip}/api/state`);
             const response = await (0, axios_1.default)(`http://${this.ip}/api/state`, { timeout: this.timeout });
             this.log.debug(`Get-Data from evcc:${JSON.stringify(response.data)}`);
-            //Global status Items - ohne loadpoints - ohne vehicle
-            let respData = response.data;
-            if (Object.prototype.hasOwnProperty.call(response.data, 'result')) {
-                // https://github.com/evcc-io/evcc/pull/22299
-                respData = response.data.result;
-            }
-            if (this.adapterStart) {
-                respData.eebus = [];
-                respData.hems = [];
-                respData.influx = [];
-                respData.messagingEvents = [];
-                respData.mqtt = [];
-                respData.network = [];
-                respData.sponsor = [];
-                respData.shm = [];
-            }
-            await this.setStatusEvcc(respData);
-            this.adapterStart = true;
-            //Laden jeden Ladepunkt einzeln
-            const loadpoints = Array.isArray(respData.loadpoints) ? respData.loadpoints : [];
-            for (const [index, loadpoint] of loadpoints.entries()) {
-                await this.setLoadPointdata(loadpoint, index, respData.vehicles);
-            }
-            for (const [vehicleKey, vehicle] of Object.entries(respData.vehicles ?? {})) {
-                await this.setVehicleData(vehicleKey, vehicle);
-            }
-            // Objektbaum einmal nach dem Start und nach jedem evcc-Neustart abgleichen (entfernte Ladepunkte/Fahrzeuge)
-            if (this.structureSyncPending && respData.startupCompleted !== false) {
-                await this.removeObsoleteObjects(loadpoints.length, Object.keys(respData.vehicles ?? {}));
-                this.structureSyncPending = false;
+            const respData = Object.prototype.hasOwnProperty.call(response.data, 'result')
+                ? response.data.result // https://github.com/evcc-io/evcc/pull/22299
+                : response.data;
+            // läuft gerade eine Verarbeitung der Live-Verbindung, nur die Erreichbarkeit merken
+            if (!this.processing) {
+                await this.processState(respData);
             }
             if (!this.stopping) {
-                if (this.evccReachable === false) {
-                    this.log.info(`Connection to evcc at http://${this.ip} restored`);
-                }
-                this.evccReachable = true;
-                await this.setStateChangedAsync('info.connection', true, true);
+                await this.markReachable();
                 this.log.debug(`Poll finished in ${Date.now() - pollStart} ms`);
             }
         }
@@ -593,6 +603,121 @@ class Evcc extends utils.Adapter {
         }
         finally {
             this.pollRunning = false;
+        }
+    }
+    /**
+     * Verarbeitet einen kompletten evcc-Zustand (aus REST oder WebSocket) und schreibt geänderte Werte.
+     *
+     * @param data Zustand wie GET /api/state
+     */
+    async processState(data) {
+        // flache Kopie: die Live-Verbindung behält ihren Zustand, Änderungen hier dürfen ihn nicht verfälschen
+        const respData = { ...data };
+        if (this.adapterStart) {
+            respData.eebus = [];
+            respData.hems = [];
+            respData.influx = [];
+            respData.messagingEvents = [];
+            respData.mqtt = [];
+            respData.network = [];
+            respData.sponsor = [];
+            respData.shm = [];
+        }
+        this.processing = true;
+        try {
+            await this.setStatusEvcc(respData);
+            this.adapterStart = true;
+            const loadpoints = Array.isArray(respData.loadpoints) ? respData.loadpoints : [];
+            for (const [index, loadpoint] of loadpoints.entries()) {
+                await this.setLoadPointdata(loadpoint, index, respData.vehicles);
+            }
+            for (const [vehicleKey, vehicle] of Object.entries(respData.vehicles ?? {})) {
+                await this.setVehicleData(vehicleKey, vehicle);
+            }
+            // Objektbaum einmal nach dem Start und nach jedem evcc-Neustart abgleichen (entfernte Ladepunkte/Fahrzeuge)
+            if (this.structureSyncPending && respData.startupCompleted !== false) {
+                await this.removeObsoleteObjects(loadpoints.length, Object.keys(respData.vehicles ?? {}));
+                this.structureSyncPending = false;
+            }
+        }
+        finally {
+            this.processing = false;
+        }
+    }
+    /**
+     * Merkt sich die Verbindung zu evcc als bestehend (Log-Info nach einem Ausfall, info.connection).
+     */
+    async markReachable() {
+        if (this.evccReachable === false) {
+            this.log.info(`Connection to evcc at http://${this.ip} restored`);
+        }
+        this.evccReachable = true;
+        await this.setStateChangedAsync('info.connection', true, true);
+    }
+    /**
+     * Öffnet die Live-Verbindung (WebSocket). Fällt sie aus, übernimmt die Abfrage per REST im Intervall.
+     */
+    startSocket() {
+        this.socket = new socket_1.EvccSocket(`ws://${this.ip}/ws`, {
+            onState: state => this.scheduleSocketProcessing(state),
+            onDisconnect: reason => {
+                this.socketActive = false;
+                this.log.debug(`Live connection to evcc closed (${reason}), using polling until it is back`);
+                // evcc startet ggf. mit geänderter Konfiguration neu: danach Objektbaum erneut abgleichen
+                this.structureSyncPending = true;
+                void this.getEvccData();
+            },
+            log: message => this.log.debug(message),
+        }, {
+            timers: {
+                setTimeout: (cb, ms) => this.setTimeout(cb, ms),
+                clearTimeout: handle => this.clearTimeout(handle),
+                setInterval: (cb, ms) => this.setInterval(cb, ms),
+                clearInterval: handle => this.clearInterval(handle),
+            },
+        });
+        this.socket.start();
+    }
+    /**
+     * Bündelt die Live-Nachrichten eines evcc-Regelzyklus und verarbeitet sie einmal.
+     *
+     * @param state aktueller Gesamtzustand der Live-Verbindung
+     */
+    scheduleSocketProcessing(state) {
+        if (!this.socketActive) {
+            this.socketActive = true;
+            this.log.info(`Live connection to evcc at ws://${this.ip}/ws active, changes arrive immediately`);
+        }
+        this.pendingSocketState = state;
+        if (this.processTimer !== undefined) {
+            return;
+        }
+        this.processTimer = this.setTimeout(() => {
+            this.processTimer = undefined;
+            void this.processSocketState();
+        }, 1000);
+    }
+    async processSocketState() {
+        const state = this.pendingSocketState;
+        if (!state || this.stopping) {
+            return;
+        }
+        if (this.processing) {
+            // eine Verarbeitung läuft noch: kurz danach erneut
+            this.scheduleSocketProcessing(state);
+            return;
+        }
+        this.pendingSocketState = undefined;
+        try {
+            await this.processState(state);
+            if (!this.stopping) {
+                await this.markReachable();
+            }
+        }
+        catch (error) {
+            if (!this.stopping) {
+                this.log.error(error?.message ?? String(error));
+            }
         }
     }
     /**
@@ -637,6 +762,7 @@ class Evcc extends utils.Adapter {
             }
         }
         this.parentTitles.delete(prefix);
+        this.writeCache.forgetBelow(prefix);
     }
     /**
      * Setzt beim Start einen zuvor gewählten externen Hausakku-Modus fort.
@@ -893,7 +1019,7 @@ class Evcc extends utils.Adapter {
             }
             await this.writeEvccState(`status.${lpEntry}`, lpEntry, lpData, writes);
         }
-        this.clearMissing('status', Object.keys(daten), writes);
+        this.clearMissing('status', presentKeys(daten), writes);
         await this.flushStates(writes);
     }
     /**
@@ -933,17 +1059,20 @@ class Evcc extends utils.Adapter {
         // evcc liefert den Plan als vehicles[x].plan, ältere Versionen als plans[]
         const firstPlan = vehicleData.plan ?? vehicleData.plans?.[0];
         const planTime = firstPlan?.time ? Date.parse(firstPlan.time) : NaN;
-        await this.setStateAsync(`${base}.title`, { val: vehicleData.title ?? '', ack: true });
-        await this.setStateAsync(`${base}.minSoc`, { val: vehicleData.minSoc ?? 0, ack: true });
-        await this.setStateAsync(`${base}.limitSoc`, { val: vehicleData.limitSoc ?? 100, ack: true });
-        await this.setStateAsync(`${base}.plan.active`, { val: firstPlan !== undefined, ack: true });
+        const writes = [
+            { id: `${base}.title`, val: vehicleData.title ?? '' },
+            { id: `${base}.minSoc`, val: vehicleData.minSoc ?? 0 },
+            { id: `${base}.limitSoc`, val: vehicleData.limitSoc ?? 100 },
+            { id: `${base}.plan.active`, val: firstPlan !== undefined },
+        ];
         // Ohne Plan in evcc vorbereitete Werte (planSoc/time) nicht überschreiben
         if (firstPlan) {
-            await this.setStateAsync(`${base}.plan.planSoc`, { val: firstPlan.soc, ack: true });
+            writes.push({ id: `${base}.plan.planSoc`, val: firstPlan.soc });
             if (!Number.isNaN(planTime)) {
-                await this.setStateAsync(`${base}.plan.time`, { val: planTime, ack: true });
+                writes.push({ id: `${base}.plan.time`, val: planTime });
             }
         }
+        await this.flushStates(writes);
     }
     /**
      * Hole Daten für Ladepunkte
@@ -1008,7 +1137,7 @@ class Evcc extends utils.Adapter {
         }
         //Alle Werte unter Status veröffentlichen
         await this.setStatusLoadPoint(loadpoint, index, writes);
-        this.clearMissing(`loadpoint.${index}.status`, Object.keys(loadpoint), writes);
+        this.clearMissing(`loadpoint.${index}.status`, presentKeys(loadpoint), writes);
         await this.flushStates(writes);
     }
     async setStatusLoadPoint(loaddata, index, writes) {

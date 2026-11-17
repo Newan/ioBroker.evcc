@@ -37,7 +37,7 @@ Forum: https://forum.iobroker.net/topic/49165/neuer-adapter-iobroker-evcc
 |---|---|
 | Host or IP address | address of evcc, e.g. `192.168.1.10` or `evcc.local` |
 | Port | port of the evcc web interface, usually `7070` |
-| Poll interval | how often evcc is read. Shorter = more current values, but more load. Default 60 s |
+| Poll interval | evcc normally sends changes immediately (live connection). The interval is only used if that is not possible. Default 60 s |
 | Test connection | checks the entered address without saving |
 | Dissolve status objects | off: values that belong together (e.g. grid, pv, battery) are stored together in one data point. On: every value gets its own data point – handy for visualizations and charts, but creates more data points |
 | Forecasts | stores the forecasts of evcc (solar, prices, CO₂, temperature). Only needed if you want to evaluate them in ioBroker, creates about 1,800 data points |
@@ -101,6 +101,7 @@ Set `time` and `soc`/`energy` first, then `active = true`. The same works per ve
 
 ## Notes
 
+- **Live values:** the adapter receives changes from evcc as soon as evcc calculates them (usually every 15–30 s) and only writes values that changed.
 - **evcc restarts (e.g. updates):** the adapter writes one warning, sets `info.connection` to `false` and reconnects
   automatically. When evcc is back, an info message appears in the log.
 - **Changes in evcc** (new, removed or renamed loadpoints and vehicles) are taken over automatically. Objects of
@@ -115,6 +116,10 @@ Set `time` and `soc`/`energy` first, then `active = true`. The same works per ve
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (Schimi1983) live values: the adapter uses evcc's live connection (WebSocket) instead of reading everything every 60 s; polling stays as fallback
+* (Schimi1983) only changed values are written (much less load on the ioBroker databases)
+
 ### 0.3.3 (2026-11-17)
 * (Schimi1983) new: `control.batteryMode` sets the home battery mode in evcc (normal, hold, charge, holdcharge, discharge) and keeps it active, `off` returns control to evcc
 * (Schimi1983) new per loadpoint: `batteryBoost`, `batteryBoostLimit`, `limitEnergy`, `priority`

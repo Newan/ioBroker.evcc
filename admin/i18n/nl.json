@@ -7,7 +7,7 @@
     "host_error": "Voer een host of IP-adres in zonder http:// en zonder pad",
     "host_help": "IP-adres of hostnaam van je evcc-installatie, zonder http://",
     "polltime": "Pollinterval",
-    "polltime_help": "Hoe vaak evcc wordt uitgelezen. Korter = actuelere waarden, maar meer belasting.",
+    "polltime_help": "evcc stuurt wijzigingen normaal direct. Het interval wordt alleen gebruikt als deze live-verbinding niet mogelijk is.",
     "port": "Poort",
     "port_help": "Poort van de evcc-webinterface (standaard 7070)",
     "test_connection": "Verbinding testen",

@@ -7,7 +7,7 @@
     "host_error": "Bitte Host oder IP-Adresse ohne http:// und ohne Pfad eingeben",
     "host_help": "IP-Adresse oder Hostname Ihrer evcc-Installation, ohne http://",
     "polltime": "Abfrageintervall",
-    "polltime_help": "Wie oft evcc abgefragt wird. Kürzer = aktuellere Werte, aber mehr Last.",
+    "polltime_help": "evcc schickt Änderungen normalerweise sofort. Das Intervall gilt nur, wenn diese Live-Verbindung nicht möglich ist.",
     "port": "Port",
     "port_help": "Port der evcc-Weboberfläche (Standard 7070)",
     "test_connection": "Verbindung testen",
